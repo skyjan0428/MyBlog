@@ -8,6 +8,7 @@ import json
 from django.http import JsonResponse
 # Create your views here.
 
+
 global forms
 
 forms = {'form':SignUpForm, 'signin': LoginForm,}
