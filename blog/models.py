@@ -8,7 +8,7 @@ class User(models.Model):
 	name = models.CharField(max_length=10)
 	email = models.CharField(max_length=30)
 	password = models.CharField(max_length=100)
-	token = models.CharField(null = True, max_length=500)
+	
 
 class Relationship(models.Model):
 	relationship_id = models.AutoField(primary_key=True)
@@ -23,3 +23,9 @@ class Post(models.Model):
 	date = models.DateTimeField('Datetime', auto_now=True)
 	content = models.TextField()
 	user_id = models.ForeignKey(User,related_name='post_user_id', on_delete=models.PROTECT)
+
+class Token(models.Model):
+	token_id = models.AutoField(primary_key=True)
+	date = models.DateTimeField('Datetime', auto_now=True)
+	token = models.CharField(unique = True, null = True, max_length=255)
+	user_id = models.ForeignKey(User,related_name='token_user_id', on_delete=models.PROTECT, default='')

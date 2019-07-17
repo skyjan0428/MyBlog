@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from blog.models import User, Post
+from blog.models import User, Post, Token
 from .forms import SignUpForm, LoginForm
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
@@ -49,9 +49,8 @@ def login(request):
 		password = user.password
 		if check_password(form.cleaned_data['password'], password):
 			token = generate_token(user.email)
-			user.token = token
-			print(token)
-			user.save()
+			t = Token(user_id=user, token=token)
+			t.save()
 			response = render(request, 'main.html', locals())
 			response.set_cookie(key='token', value=token)
 			return response
@@ -66,9 +65,9 @@ def post(request):
 			row = row.split('=')
 			data[row[0]] = row[1]
 		token = unquote(data['token']).replace('\"', '')
-		user = User.objects.filter(token=token)
-		if user:
-			new_post = Post(content = data['content'], user_id = user[0])
+		user_id = Token.objects.get(token=token).user_id
+		if user_id:
+			new_post = Post(content = data['content'], user_id = user_id)
 			new_post.save()
 
 	return render(request, 'main.html', locals())
@@ -81,9 +80,11 @@ import hmac
 def checkLogin(request):
 	global forms
 	if request.COOKIES['token']:
-		user = User.objects.get(token=request.COOKIES['token'])
-		if user:
+		try:
+			tokens = Token.objects.get(token=request.COOKIES['token'])
 			return True
+		except:
+			return False
 	return False
 
 def generate_token(key, expire=3600):
