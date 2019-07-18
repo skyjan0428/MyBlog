@@ -16,7 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.conf.urls import url
-from blog.views import index, signup, login, post, testJson
+from blog.views import index, signup, login, post, testJson, information, postOperation
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,4 +25,6 @@ urlpatterns = [
     url(r'^login/$', login, name = 'login'),
     url(r'^sendPost/$', post, name = 'post'),
     url(r'^test/$', testJson, name = 'post'),
+    url(r'^information/$', information, name = 'post'),
+    url(r'^postoperation/$', postOperation, name = 'postoperation'),
 ]

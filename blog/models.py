@@ -17,15 +17,28 @@ class Relationship(models.Model):
 	user_id1 = models.ForeignKey(User,related_name='self', on_delete=models.PROTECT)
 	user_id2 = models.ForeignKey(User,related_name='other', on_delete=models.PROTECT)
 
-
 class Post(models.Model):
 	post_id = models.AutoField(primary_key=True)
 	date = models.DateTimeField('Datetime', auto_now=True)
 	content = models.TextField()
 	user_id = models.ForeignKey(User,related_name='post_user_id', on_delete=models.PROTECT)
+	# attach_id = models.ForeignKey(User,related_name='post_user_id', on_delete=models.PROTECT, null = True)
 
 class Token(models.Model):
 	token_id = models.AutoField(primary_key=True)
 	date = models.DateTimeField('Datetime', auto_now=True)
 	token = models.CharField(unique = True, null = True, max_length=255)
 	user_id = models.ForeignKey(User,related_name='token_user_id', on_delete=models.PROTECT, default='')
+
+class Message(models.Model):
+	message_id = models.AutoField(primary_key=True)
+	sender = models.ForeignKey(User,related_name='sender', on_delete=models.PROTECT)
+	reciever = models.ForeignKey(User,related_name='reciever', on_delete=models.PROTECT)
+	date = models.DateTimeField('Datetime', auto_now=True)
+
+class LikePost(models.Model):
+	likePost_id = models.AutoField(primary_key=True)
+	post_id = models.ForeignKey(Post,related_name='like_post_id', on_delete=models.PROTECT)
+	user_id = models.ForeignKey(User,related_name='like_user_id', on_delete=models.PROTECT, default='')
+
+

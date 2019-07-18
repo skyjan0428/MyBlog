@@ -1,29 +1,56 @@
 
 function sendPost(){
-	console.log(getCookie('token').replace("\"", ""))
+  var content = document.getElementById("content").value;
+  console.log(content);
 	$.ajax({
             type: "POST", //傳送方式
             url: "/sendPost/", //傳送目的地
             dataType: "json", //資料格式
             data: { //傳送資料
-                content: '123456', //表單欄位 ID nickname
+                content: content, //表單欄位 ID nickname
                 token: getCookie('token') //表單欄位 ID gender
             },
             success: function(data) {
-                // if (data.nickname) { //如果後端回傳 json 資料有 nickname
-                //     $("#demo")[0].reset(); //重設 ID 為 demo 的 form (表單)
-                //     $("#result").html('<font color="#007500">您的暱稱為「<font color="#0000ff">' + data.nickname + '</font>」，性別為「<font color="#0000ff">' + data.gender + '</font>」！</font>');
-                // } else { //否則讀取後端回傳 json 資料 errorMsg 顯示錯誤訊息
-                //     $("#demo")[0].reset(); //重設 ID 為 demo 的 form (表單)
-                //     $("#result").html('<font color="#ff0000">' + data.errorMsg + '</font>');
-                // }
+              console.log(data)
+                if (data.status) { 
+                  var dv = document.createElement("DIV");
+                    dv.innerHTML = '<li>' + data.data.content + '</li>' + '<li>' + data.data.date + '</li></br>';
+                    var posts = document.getElementById('post')
+                    posts.insertBefore(dv, posts.firstChild);
+                }
             },
             error: function(jqXHR) {
+              console.log(jqXHR)
                 // $("#demo")[0].reset(); //重設 ID 為 demo 的 form (表單)
-                // $("#result").html('<font color="#ff0000">發生錯誤：' + jqXHR.status + '</font>');
+                // $("#result").html('<font color="#ff0000">發生錯誤：' + jsqXHR.status + '</font>');
             }
         });
 }
+
+function like(id){
+  $.ajax({
+            type: "POST", //傳送方式
+            url: "/postoperation/", //傳送目的地
+            dataType: "json", //資料格式
+            data: { //傳送資料
+                post_id: id, 
+                token: getCookie('token'),
+                operate: '1',
+            },
+            success: function(data) {
+              console.log(data)
+                if (data.status) { 
+                  
+                }
+            },
+            error: function(jqXHR) {
+              console.log(jqXHR)
+                // $("#demo")[0].reset(); //重設 ID 為 demo 的 form (表單)
+                // $("#result").html('<font color="#ff0000">發生錯誤：' + jsqXHR.status + '</font>');
+            }
+        });
+}
+
 function getCookie(cname) {
   var name = cname + "=";
   var ca = document.cookie.split(';');
