@@ -50,6 +50,22 @@ function like(id){
             }
         });
 }
+var user_id = "";
+
+function chooseUser(id){
+  user_id = id;
+}
+
+
+function sendChat(){
+  var chat = document.getElementById("chat");
+  var message = chat.value;
+  chat.value = "";
+  chatSocket.send(JSON.stringify({
+      'user_id':user_id,
+      'message': message
+  }));
+}
 
 function getCookie(cname) {
   var name = cname + "=";
@@ -66,3 +82,32 @@ function getCookie(cname) {
   return "";
 }
 
+var chatSocket = new WebSocket(
+  'ws://' + window.location.host + '/blog/');
+
+chatSocket.onmessage = function(e) {
+  var data = JSON.parse(e.data);
+  console.log(e.data);
+  var message = data['message'];
+  console.log("收到" + message + '\n');
+};
+
+chatSocket.onclose = function(e) {
+  console.error('Chat socket closed unexpectedly');
+};
+
+// document.querySelector('#chat-message-input').focus();
+
+// document.querySelector('#chat-message-input').onkeyup = function(e) {
+//   if (e.keyCode === 13) {  // enter, return
+//       document.querySelector('#chat-message-submit').click();
+//   }
+// };
+
+function sendTest(){
+  console.log("click!");
+  var message = "test";
+  chatSocket.send(JSON.stringify({
+      'message': message
+  }));
+}

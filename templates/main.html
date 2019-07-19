@@ -4,7 +4,7 @@
 <html>
 <head>
 		<meta charset="utf-8">
-		<script type="text/javascript" src="{% static 'js/update.js' %}"></script>
+		<script type="text/javascript" src="{% static 'js/updates.js' %}"></script>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 </head>
@@ -12,6 +12,7 @@
 	<textarea id = "content" name="Content" style="width:400px;height:120px;">
 </textarea>
 	<button type="button" onclick="sendPost()"> 送出</button>
+	<button type="button" onclick="sendTest()"> 傳送test</button>
 
 <div id = "post">
 	{% for post in posts %}
@@ -21,8 +22,17 @@
         <button type="button" onclick="like({{ post.id }})"> 按讚</button>
         <br>
 	{% endfor %}
-
 </div>
+
+<div id = "chatlist">
+	{% for user in users %}
+		<li onclick="chooseUser({{user.user_id}})"> {{user.name}}</li>
+	{% endfor %}
+</div>
+<textarea id = "chatRoom" name="chatroom" style="width:400px;height:120px;">
+</textarea>
+	<input id="chat" type="text">
+	<button type="button" onclick="sendChat()"> 送出</button>
 
 </body>
 </html>

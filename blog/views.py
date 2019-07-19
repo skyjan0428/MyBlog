@@ -22,8 +22,12 @@ def testJson(request):
 def index(request):
 	global forms
 	if checkLogin(request):
-		return render(request, 'main.html', {'posts': getPosts(request)})
+		return render(request, 'main.html', {'posts': getPosts(request), 'users':getUserList(request)})
 	return render(request, 'login.html', forms)
+
+def getUserList(request):
+	users = User.objects.all()
+	return users
 
 def getPosts(request):
 	posts = Post.objects.all()
@@ -88,7 +92,7 @@ def signup(request):
 def login(request):
 	global forms
 	if checkLogin(request):
-		return render(request, 'success.html', forms)
+		return render(request, 'main.html', {'posts': getPosts(request)})
 	if request.method == 'POST':
 		form = LoginForm(request.POST)
 		if not form.is_valid():
@@ -136,13 +140,14 @@ import hmac
 
 def checkLogin(request):
 	global forms
-	if request.COOKIES['token']:
-		try:
-			tokens = Token.objects.get(token=request.COOKIES['token'])
-			return True
-		except:
-			return False
-	return False
+	try: 
+		token = request.COOKIES['token']
+		print('token:' , token)
+		tokens = Token.objects.get(token=token)
+		return True
+	except:
+		print('token:' , 0)
+		return False
 
 def generate_token(key, expire=3600):
     ts_str = str(time.time() + expire)

@@ -22,7 +22,7 @@ class Post(models.Model):
 	date = models.DateTimeField('Datetime', auto_now=True)
 	content = models.TextField()
 	user_id = models.ForeignKey(User,related_name='post_user_id', on_delete=models.PROTECT)
-	# attach_id = models.ForeignKey(User,related_name='post_user_id', on_delete=models.PROTECT, null = True)
+	# attach = models.ForeignKey('self',related_name='attach_id', on_delete=models.PROTECT, null = True)
 
 class Token(models.Model):
 	token_id = models.AutoField(primary_key=True)
@@ -41,4 +41,14 @@ class LikePost(models.Model):
 	post_id = models.ForeignKey(Post,related_name='like_post_id', on_delete=models.PROTECT)
 	user_id = models.ForeignKey(User,related_name='like_user_id', on_delete=models.PROTECT, default='')
 
+class LikePost(models.Model):
+	likePost_id = models.AutoField(primary_key=True)
+	post_id = models.ForeignKey(Post,related_name='like_post_id', on_delete=models.PROTECT)
+	user_id = models.ForeignKey(User,related_name='like_user_id', on_delete=models.PROTECT, default='')
 
+
+class Client(models.Model):
+	client_id = models.AutoField(primary_key=True)
+	date = models.DateTimeField('Datetime', auto_now=True)
+	channel_name = models.CharField(max_length=100)
+	user_id = models.ForeignKey(User,related_name='client_user_id', on_delete=models.PROTECT, default='')
