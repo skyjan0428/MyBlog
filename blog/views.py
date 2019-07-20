@@ -17,6 +17,9 @@ forms = {'form':SignUpForm, 'signin': LoginForm,}
 
 
 def testJson(request):
+	posts = Post.objects.filter(attach=None)
+	for post in posts:
+		print(post.content)
 	return JsonResponse({'foo':'bar'})
 
 

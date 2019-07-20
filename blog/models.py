@@ -23,7 +23,7 @@ class Post(models.Model):
 	date = models.DateTimeField('Datetime', auto_now=True)
 	content = models.TextField()
 	user_id = models.ForeignKey(User,related_name='post_user_id', on_delete=models.PROTECT)
-	# attach = models.ForeignKey('self',related_name='attach_id', on_delete=models.PROTECT, null = True)
+	attach = models.ForeignKey('self',related_name='attach_to_post', on_delete=models.PROTECT, null = True)
 
 class Token(models.Model):
 	token_id = models.AutoField(primary_key=True)
