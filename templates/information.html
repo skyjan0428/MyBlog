@@ -1,0 +1,64 @@
+{%load staticfiles %}
+
+<!DOCTYPE html>
+<html>
+<head>
+		<meta charset="utf-8">
+		<!-- <script type="text/javascript" src="{% static 'js/updates.js' %}"></script> -->
+		<script type="text/javascript" src="{% static 'js/update.js' %}"></script>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+</head>
+<body>
+<div id = "information">
+	<H1> Information </H1>
+	<div id="makeDescription">
+		{% if User.description %}
+			{{User.description}}
+		{% endif %}
+	</div>
+	<a onclick="createDescription()" href="#"> 更新簡介</a>
+        <li> {{ User.email }} </li>
+        <li> {{ User.name }} </li>
+        {% if addFriend %}
+        <button type="button" onclick="addFriend({{User.user_id}})"> 加為好友</button>
+        {% endif %}
+        {% if text %}
+        <p> {{text}}</p>
+        {% endif %}
+        {% if waitConfirm %}
+        <button type="button" onclick="addFriend({{waitConfirm}})"> 確認</button>
+        {% endif %}
+
+
+</div>
+       <!--  <br>
+        <button type="button" onclick="addFriend()"> 加為好友</button> -->
+<div id = "post">
+	{% for post in posts %}
+		<li> {{post.name}}</li>
+        <li> {{ post.date }} </li>
+        <li> {{ post.content }} </li>
+        <button type="button" onclick="like({{ post.id }})"> 按讚</button>
+        <br>
+	{% endfor %}
+</div>
+
+<div id = "chatlist">
+	{% for user in chats %}
+		<li onclick="chooseUser({{user.user_id}})"> {{user.name}}</li>
+	{% endfor %}
+</div>
+
+<textarea id = "chatRoom" name="chatroom" style="width:400px;height:120px;">
+</textarea>
+	<input id="chat" type="text">
+	<button type="button" onclick="sendChat()"> 送出</button>
+<br>
+{% for photo in photos%}
+<img src="{{photo.photo.url}}" width='200px' heigth='200px'>
+{% endfor %}
+
+
+</body>
+</html>

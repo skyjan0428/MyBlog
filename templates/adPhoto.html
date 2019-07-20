@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>添加使用者資料<</title>
+</head>
+<body>
+    <h1>添加使用者</h1>
+    <form action="/add/" enctype="multipart/form-data" method="post">
+        {% csrf_token %} # 防止跨站請求偽造
+        <label for="user_image">大頭貼:</label><br>
+        <input type="file" name="user_image"><br><br>
+        <input type="submit" value="提交">
+
+    </form>
+</body>
+</html>
