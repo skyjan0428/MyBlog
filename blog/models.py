@@ -8,6 +8,7 @@ class User(models.Model):
 	name = models.CharField(max_length=10)
 	email = models.CharField(max_length=30)
 	password = models.CharField(max_length=100)
+	description = models.TextField(null=True)
 	
 
 class Relationship(models.Model):
@@ -35,20 +36,26 @@ class Message(models.Model):
 	sender = models.ForeignKey(User,related_name='sender', on_delete=models.PROTECT)
 	reciever = models.ForeignKey(User,related_name='reciever', on_delete=models.PROTECT)
 	date = models.DateTimeField('Datetime', auto_now=True)
+	text = models.TextField(null=True)
+
 
 class LikePost(models.Model):
 	likePost_id = models.AutoField(primary_key=True)
 	post_id = models.ForeignKey(Post,related_name='like_post_id', on_delete=models.PROTECT)
 	user_id = models.ForeignKey(User,related_name='like_user_id', on_delete=models.PROTECT, default='')
-
-class LikePost(models.Model):
-	likePost_id = models.AutoField(primary_key=True)
-	post_id = models.ForeignKey(Post,related_name='like_post_id', on_delete=models.PROTECT)
-	user_id = models.ForeignKey(User,related_name='like_user_id', on_delete=models.PROTECT, default='')
-
 
 class Client(models.Model):
 	client_id = models.AutoField(primary_key=True)
 	date = models.DateTimeField('Datetime', auto_now=True)
 	channel_name = models.CharField(max_length=100)
 	user_id = models.ForeignKey(User,related_name='client_user_id', on_delete=models.PROTECT, default='')
+
+class Photo(models.Model):
+	photo_id = models.AutoField(primary_key=True)
+	photo = models.ImageField(upload_to='photo/')
+	user_id = models.ForeignKey(User,related_name='photo_user_id', on_delete=models.PROTECT, default='')
+	date = models.DateTimeField('Datetime', auto_now=True)
+
+
+
+

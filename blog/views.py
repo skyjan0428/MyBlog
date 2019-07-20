@@ -1,11 +1,12 @@
 from django.shortcuts import render
-from blog.models import User, Post, Token, LikePost
+from blog.models import User, Post, Token, LikePost, Message, Relationship, Photo
 from .forms import SignUpForm, LoginForm
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
 from urllib.parse import unquote
 import json
 from django.http import JsonResponse
+from django.db.models import Q
 # import datetime
 # Create your views here.
 
@@ -19,18 +20,36 @@ def testJson(request):
 	return JsonResponse({'foo':'bar'})
 
 
+
+def add(request):
+    if request.method == "POST":
+        user_img = request.FILES.get('user_image')
+        photo = Photo(user_id=getUserByToken(request.COOKIES['token']), photo=user_img)
+        photo.save()
+        
+    return render(request, 'adPhoto.html', locals())
+
+
 def index(request):
 	global forms
 	if checkLogin(request):
-		return render(request, 'main.html', {'posts': getPosts(request), 'users':getUserList(request)})
+		user = getUserByToken(request.COOKIES['token'])
+		return information(request, user)
+		# return render(request, 'main.html', {'posts': getPosts(request), 'users':getUserList(request)})
 	return render(request, 'login.html', forms)
 
-def getUserList(request):
-	users = User.objects.all()
+def getUserList(request, user=None):
+	if user:
+		users = User.objects.exclude(user_id=user.user_id)
+	else:
+		users = User.objects.all()
 	return users
 
-def getPosts(request):
-	posts = Post.objects.all()
+def getPosts(request, user=None):
+	if user:
+		posts = Post.objects.filter(user_id=user).order_by('-date')
+	else:
+		posts = Post.objects.all().order_by('-date')
 	lst = []
 	for post in posts:
 		data = {
@@ -41,6 +60,44 @@ def getPosts(request):
 		}
 		lst.append(data)
 	return lst
+
+@csrf_exempt
+def addFriend(request):
+	if not checkLogin(request):
+		return JsonResponse({'status':False, 'data':{}})
+	# try:
+	user_id = getRequestData(request)['user_id']
+	user_other = User.objects.get(user_id = user_id)
+	user_self = getUserByToken(request.COOKIES['token'])
+	relationship = Relationship.objects.filter(user_id1=user_other, user_id2=user_self).first()
+	if relationship:
+		relationship.value += 1
+		relationship.save();
+	else:
+		relationship = Relationship(value=0, user_id1=user_self, user_id2=user_other)
+		relationship.save()
+		# return JsonResponse({'status':False, 'data':{}})
+	return JsonResponse({'status':True, 'data':{}})
+
+@csrf_exempt
+def openChatRoom(request):
+	if not checkLogin(request):
+		return JsonResponse({'status':False, 'data':{}})
+	try:
+		user = getUserByToken(request.COOKIES['token'])
+		reciever = getRequestData(request)['reciever']
+		messages = Message.objects.filter(Q(sender=user, reciever=reciever) | Q(sender=reciever, reciever=user)).order_by("date")
+		lst = []
+		for message in messages:
+			dic = {}
+			dic['message_id'] = message.message_id
+			dic['text'] = ('You : ' if message.sender == user else (message.sender.name + " : ")) + message.text
+			lst.append(dic)
+		return JsonResponse({'status':True, 'data':lst})
+	except:
+		return JsonResponse({'status':False, 'data':{}})
+
+
 
 
 @csrf_exempt
@@ -70,11 +127,63 @@ operate={
 	'1':likePost,
 }
 
-def information(request):
+
+
+@csrf_exempt
+def revise(request):
+	global revise_action
+	if not checkLogin(request):
+		return JsonResponse({'status':False, 'data':{}})
+	data = getRequestData(request)
+	return revise_action[data['type']](request, data)
+
+def createDescription(request, data):
 	user = getUserByToken(request.COOKIES['token'])
-	if user:
-		return render(request, 'information.html', {'User': user})
-	return render(request, 'login.html', forms)
+	user.description = data['description'].replace('+', ' ')
+	user.save()
+	return JsonResponse({'status':True, 'data':{}})
+
+
+global revise_action
+
+revise_action = {
+	'1': createDescription,
+}
+
+def information(request, informations):
+	if not checkLogin(request):
+		return JsonResponse({'status':False, 'data':{}})
+	# informations = User.objects.filter(user_id=id).first()
+	user = getUserByToken(request.COOKIES['token'])
+	replyDic = {}
+	replyDic['User'] = informations
+	replyDic['posts'] = getPosts(request,informations)
+	replyDic['chats'] = getUserList(request, user)
+	photos = Photo.objects.filter(user_id = informations)
+	replyDic['photos'] = photos
+
+	if user and user!=informations:
+		relationship1 = Relationship.objects.filter(user_id1 = user, user_id2 = informations).first()
+		relationship2 = Relationship.objects.filter(user_id1 = informations, user_id2 = user).first()
+		if relationship1:
+			if relationship1.value == 0:
+				replyDic['text'] = 'waiting'
+				# return render(request, 'information.html', {'User': informations, 'text':"waiting"})
+			else:
+				replyDic['text'] = 'AlreadyFriend'
+				# return render(request, 'information.html', {'User': informations, 'text':"AlreadyFriend"})
+		elif relationship2:
+			if relationship2.value == 0:
+				replyDic['waitConfirm'] = informations.user_id
+				# return render(request, 'information.html', {'User': informations, 'waitConfirm': informations.user_id})
+			else:
+				replyDic['text'] = 'AlreadyFriend'
+				# return render(request, 'information.html', {'User': informations, 'text':"AlreadyFriend"})
+		else:
+			replyDic['addFriend'] = True
+			# return render(request, 'information.html', {'User': informations, 'addFriend':True})
+
+	return render(request, 'information.html', replyDic)
 
 def signup(request):
 	global forms
@@ -111,7 +220,6 @@ def login(request):
 @csrf_exempt
 def post(request):
 	if request.method == 'POST':
-		rows = request.body.decode().split('&')
 		data = getRequestData(request)
 		token = data['token'].replace('\"', '')
 		user_id = Token.objects.get(token=token).user_id
@@ -128,6 +236,7 @@ def post(request):
 
 def getRequestData(request):
 	rows = request.body.decode().split('&')
+	print(rows)
 	data = {}
 	for row in rows:
 		row = row.split('=')
@@ -142,7 +251,6 @@ def checkLogin(request):
 	global forms
 	try: 
 		token = request.COOKIES['token']
-		print('token:' , token)
 		tokens = Token.objects.get(token=token)
 		return True
 	except:

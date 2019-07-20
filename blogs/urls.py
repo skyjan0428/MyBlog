@@ -16,7 +16,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.conf.urls import url
-from blog.views import index, signup, login, post, testJson, information, postOperation
+from blog.views import index, signup, login, post, testJson, information, postOperation, openChatRoom, addFriend, revise, add
+from django.conf.urls.static import static
+from django.conf import settings
+
+from django.shortcuts import render
+
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,6 +31,13 @@ urlpatterns = [
     url(r'^login/$', login, name = 'login'),
     url(r'^sendPost/$', post, name = 'post'),
     url(r'^test/$', testJson, name = 'post'),
-    url(r'^information/$', information, name = 'post'),
+    path('information/<int:id>/', information, name = 'information'),
+    path('information/addFriend/', addFriend, name = 'addFriend'),
+    path('information/revise/', revise, name = 'revise'),
     url(r'^postoperation/$', postOperation, name = 'postoperation'),
-]
+    url(r'^openChatRoom/$', openChatRoom, name = 'openChatRoom'),
+    path('add/', add, name = 'add'),
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
+

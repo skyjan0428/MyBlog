@@ -1,23 +1,30 @@
+{%load staticfiles %}
 <!DOCTYPE html>
 <html>
 <head>
 		<meta charset="utf-8">
-		<link href="css/reglogin.css" rel='stylesheet' type='text/css' />
+		<link href="{% static 'css/login.css' %}" rel='stylesheet' type='text/css' />
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
-	<div class="main">
-		<div class="header">
-			<h1>Login!</h1>
-		</div>
-		<form action = '/login/'  method='post'>
-					{%csrf_token%}
-					{{signin.as_p}}
-					<input type="submit" value="Login" >
-					<div class="clear"> </div>
+		<div class="mid" align="center">
+			<img src="{% static 'images/cat.jpeg' %}" alt="Avatar"><br>
+			<h3> Sign in to BlogCat</h3><br>
+			<form   action = '/login/'  method='post'>
+				{%csrf_token%}
+				<div align="left" style="display: inline-block">
+					<label for="email">Email Address</label><br>
+					<input class="typing" name = 'email' type="text"  required/><br>	
+					<label for="password">Password</label><br>
+					<input class="typing" name = 'password' type="password" required/><br>
+					<input class="login" type="submit" value="Sign in" >
+				</div>
 			</form>
+			<div class="new">
+				<p>New to BlogCat?&nbsp;&nbsp;</p><a href="">Create an account.</a>
+			</div>
+		</div>
 
-		<h1>Sign up!</h1>
 		<form action = '/signup/' method='post'>
 			{%csrf_token%}
 					<!-- <li><input name = 'Username' type="text" placeholder="Username" required/></li>
@@ -27,7 +34,6 @@
 					<input type="submit" value="Signup" >
 					<div class="clear"> </div>
 
-			</form>
-	</div>
+		</form>
 </body>
 </html>

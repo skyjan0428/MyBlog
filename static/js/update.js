@@ -51,19 +51,98 @@ function like(id){
         });
 }
 var user_id = "";
-
 function chooseUser(id){
   user_id = id;
+  document.getElementById('chatRoom').value = "";
+  $.ajax({
+            type: "POST", 
+            url: "/openChatRoom/", 
+            dataType: "json", 
+            data: { 
+                'reciever': user_id,
+            },
+            success: function(data) {
+              if (data.status) { 
+                  lst = data['data']
+                  var chatRoom = document.getElementById('chatRoom');
+                  lst.forEach(function(e){
+                      chatRoom.value += "\n"+ e['text'];
+                  });
+              }
+            },
+            error: function(jqXHR) {
+              console.log(jqXHR)
+                // $("#demo")[0].reset(); //重設 ID 為 demo 的 form (表單)
+                // $("#result").html('<font color="#ff0000">發生錯誤：' + jsqXHR.status + '</font>');
+            }
+        });
+}
+function addFriend(id){
+    $.ajax({
+            type: "POST", 
+            url: "/information/addFriend/", 
+            dataType: "json", 
+            data: { 
+                'user_id': id,
+            },
+            success: function(data) {
+              console.log(data)
+            },
+            error: function(jqXHR) {
+              console.log(jqXHR)
+                // $("#demo")[0].reset(); //重設 ID 為 demo 的 form (表單)
+                // $("#result").html('<font color="#ff0000">發生錯誤：' + jsqXHR.status + '</font>');
+            }
+        });
+  }
+
+
+function createDescription(){
+  console.log("createDescription");
+  var des = document.getElementById("makeDescription");
+  var content = ""
+  if(des.innerText != null)
+    content = des.innerText;
+  des.innerHTML = "<textarea id='des' placeholder='在此更新你的簡介'>" + content + "</textarea> <button type='button' onclick='addDescription()'> 確認 </button>";
 }
 
+function addDescription(){
+  console.log("addDescription");
+
+  var content = document.getElementById('des');
+  console.log(content.value);
+  $.ajax({
+            type: "POST", 
+            url: "/information/revise/", 
+            dataType: "json", 
+            data: { 
+                'type': '1',
+                'description': content.value,
+            },
+            success: function(data) {
+              var des = document.getElementById("makeDescription");
+              des.innerHTML = content.value;
+            },
+            error: function(jqXHR) {
+              console.log(jqXHR)
+                // $("#demo")[0].reset(); //重設 ID 為 demo 的 form (表單)
+                // $("#result").html('<font color="#ff0000">發生錯誤：' + jsqXHR.status + '</font>');
+            }
+        });
+}
 
 function sendChat(){
   var chat = document.getElementById("chat");
+  console.log(chat);
   var message = chat.value;
+  
   chat.value = "";
+  var chatRoom = document.getElementById('chatRoom');
+  chatRoom.value += "\n"+"You" + " : " + message;
   chatSocket.send(JSON.stringify({
+    'message': message,
       'user_id':user_id,
-      'message': message
+      
   }));
 }
 
@@ -89,6 +168,8 @@ chatSocket.onmessage = function(e) {
   var data = JSON.parse(e.data);
   console.log(e.data);
   var message = data['message'];
+  var chatRoom = document.getElementById('chatRoom');
+  chatRoom.value += "\n"+data['sender'] + " : " + message;
   console.log("收到" + message + '\n');
 };
 
@@ -104,10 +185,10 @@ chatSocket.onclose = function(e) {
 //   }
 // };
 
-function sendTest(){
-  console.log("click!");
-  var message = "test";
-  chatSocket.send(JSON.stringify({
-      'message': message
-  }));
-}
+// function sendTest(){
+//   console.log("click!");
+//   var message = "test";
+//   chatSocket.send(JSON.stringify({
+//       'message': message
+//   }));
+// }
