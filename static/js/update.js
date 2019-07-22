@@ -1,104 +1,93 @@
 
+function sendAjax(data, path, type,dataType, success, error){
+  $.ajax({
+            type: type, //傳送方式
+            url: path, //傳送目的地
+            dataType: dataType, //資料格式
+            data: data,
+            success: success,
+            error: error,
+        });
+}
 function sendPost(){
   var content = document.getElementById("content").value;
-  console.log(content);
-	$.ajax({
-            type: "POST", //傳送方式
-            url: "/sendPost/", //傳送目的地
-            dataType: "json", //資料格式
-            data: { //傳送資料
-                content: content, //表單欄位 ID nickname
-                token: getCookie('token') //表單欄位 ID gender
-            },
-            success: function(data) {
-              console.log(data)
-                if (data.status) { 
-                  var dv = document.createElement("DIV");
-                    dv.innerHTML = '<li>' + data.data.content + '</li>' + '<li>' + data.data.date + '</li></br>';
-                    var posts = document.getElementById('post')
-                    posts.insertBefore(dv, posts.firstChild);
-                }
-            },
-            error: function(jqXHR) {
-              console.log(jqXHR)
-                // $("#demo")[0].reset(); //重設 ID 為 demo 的 form (表單)
-                // $("#result").html('<font color="#ff0000">發生錯誤：' + jsqXHR.status + '</font>');
-            }
-        });
+  data = { 
+    content: content, 
+    token: getCookie('token')
+  }
+  function success(data){
+    if (data.status) { 
+        var dv = document.createElement("DIV");
+        dv.id='postForm';
+        dv.innerHTML = "<div id='title'> <img class='postFace' src='"+data.data.photo+"' > <span id='name'>"+data.data.name+"</span><span id='date'>"+data.data.date+"</span>"+"</div><p>"+data.data.content+"</p><a onclick='like("+data.data.post_id+")'>讚</a>";
+        var posts = document.getElementById('posts')
+        posts.insertBefore(dv, posts.firstChild);
+
+    }
+  }
+  function error(data){
+    console.log(jqXHR)
+  }
+  sendAjax(data,"/sendPost/","POST", "json", success, error)
 }
 
 function like(id){
-  $.ajax({
-            type: "POST", //傳送方式
-            url: "/postoperation/", //傳送目的地
-            dataType: "json", //資料格式
-            data: { //傳送資料
-                post_id: id, 
-                token: getCookie('token'),
-                operate: '1',
-            },
-            success: function(data) {
-              console.log(data)
-                if (data.status) { 
-                  
-                }
-            },
-            error: function(jqXHR) {
-              console.log(jqXHR)
-                // $("#demo")[0].reset(); //重設 ID 為 demo 的 form (表單)
-                // $("#result").html('<font color="#ff0000">發生錯誤：' + jsqXHR.status + '</font>');
-            }
-        });
+  function success(data) {
+      console.log(data)
+      if (data.status) { 
+        
+      }
+   }
+  function error(jqXHR) {
+      console.log(jqXHR)
+  }
+  data= { 
+      post_id: id, 
+      token: getCookie('token'),
+      operate: 'likepost',
+  }
+  sendAjax(data,"/postoperation/","POST", "json", success, error)
 }
+
 var user_id = "";
 function chooseUser(id){
   user_id = id;
   document.getElementById('chatRoom').value = "";
-  $.ajax({
-            type: "POST", 
-            url: "/openChatRoom/", 
-            dataType: "json", 
-            data: { 
-                'reciever': user_id,
-            },
-            success: function(data) {
-              if (data.status) { 
-                  lst = data['data']
-                  var chatRoom = document.getElementById('chatRoom');
-                  lst.forEach(function(e){
-                      chatRoom.value += "\n"+ e['text'];
-                  });
-              }
-            },
-            error: function(jqXHR) {
-              console.log(jqXHR)
-                // $("#demo")[0].reset(); //重設 ID 為 demo 的 form (表單)
-                // $("#result").html('<font color="#ff0000">發生錯誤：' + jsqXHR.status + '</font>');
-            }
-        });
+  function success(data) {
+      if (data.status) { 
+          lst = data['data']
+          var chatRoom = document.getElementById('chatRoom');
+          lst.forEach(function(e){
+              chatRoom.value += "\n"+ e['text'];
+          });
+      }
+   }
+  function error(jqXHR) {
+      console.log(jqXHR)
+  }
+  data={ 
+    token: getCookie('token'),
+    'reciever': user_id,
+  }
+  sendAjax(data,"/openChatRoom/","POST", "json", success, error)
 }
 function addFriend(id){
-    $.ajax({
-            type: "POST", 
-            url: "/information/addFriend/", 
-            dataType: "json", 
-            data: { 
-                'user_id': id,
-            },
-            success: function(data) {
-              console.log(data)
-            },
-            error: function(jqXHR) {
-              console.log(jqXHR)
-                // $("#demo")[0].reset(); //重設 ID 為 demo 的 form (表單)
-                // $("#result").html('<font color="#ff0000">發生錯誤：' + jsqXHR.status + '</font>');
-            }
-        });
+  function success(data) {
+      console.log(data)
   }
+  function error(jqXHR) {
+      console.log(jqXHR)
+  }
+  data = { 
+    token: getCookie('token'),
+    'user_id': id,
+  }
+  sendAjax(data,"/information/addFriend/","POST", "json", success, error)
+    
+}
 
 
 function createDescription(){
-  console.log("createDescription");
   var des = document.getElementById("makeDescription");
   var content = ""
   if(des.innerText != null)
@@ -107,28 +96,21 @@ function createDescription(){
 }
 
 function addDescription(){
-  console.log("addDescription");
-
   var content = document.getElementById('des');
-  console.log(content.value);
-  $.ajax({
-            type: "POST", 
-            url: "/information/revise/", 
-            dataType: "json", 
-            data: { 
-                'type': '1',
-                'description': content.value,
-            },
-            success: function(data) {
-              var des = document.getElementById("makeDescription");
-              des.innerHTML = content.value;
-            },
-            error: function(jqXHR) {
-              console.log(jqXHR)
-                // $("#demo")[0].reset(); //重設 ID 為 demo 的 form (表單)
-                // $("#result").html('<font color="#ff0000">發生錯誤：' + jsqXHR.status + '</font>');
-            }
-        });
+  function success(data) {
+      var des = document.getElementById("makeDescription");
+       des.innerHTML = content.value;
+  }
+  function error(jqXHR) {
+      console.log(jqXHR)
+  }
+  data = { 
+    token: getCookie('token'),
+    'type': '1',
+    'description': content.value,
+  }
+  sendAjax(data,"/information/revise/","POST", "json", success, error)
+
 }
 
 function sendChat(){

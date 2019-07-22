@@ -7,19 +7,35 @@
 		<!-- <script type="text/javascript" src="{% static 'js/updates.js' %}"></script> -->
 		<script type="text/javascript" src="{% static 'js/update.js' %}"></script>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link href="{% static 'css/information.css' %}" rel='stylesheet' type='text/css' />
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 </head>
 <body>
-<div id = "information">
-	<H1> Information </H1>
+
+<div id = "top">
+	<p id="mark"> BlogCat </p>
+	<a href="#">Home</a>
+	<a href="#">Profile</a>
+	<a href="#">Photo</a>
+	<div id="topRight" align="right">
+	<input id="search" type="text" placeholder="Search" />
+	<img id = "notification" src="{% static 'images/notifications.png' %}" alt="Avatar">
+	<img id = "cat" src="{% static 'images/cat.jpeg' %}" alt="Avatar">
+	</div>
+
+</div>
+<div id = "information" align="center">
+	<div id="intro">
+	<img id = "userPhoto" src="{% static 'images/cat.jpeg' %}" alt="Avatar">
+		<h3>{{ User.name }} </h3>
 	<div id="makeDescription">
 		{% if User.description %}
 			{{User.description}}
 		{% endif %}
 	</div>
 	<a onclick="createDescription()" href="#"> 更新簡介</a>
+
         <li> {{ User.email }} </li>
-        <li> {{ User.name }} </li>
         {% if addFriend %}
         <button type="button" onclick="addFriend({{User.user_id}})"> 加為好友</button>
         {% endif %}
@@ -29,21 +45,46 @@
         {% if waitConfirm %}
         <button type="button" onclick="addFriend({{waitConfirm}})"> 確認</button>
         {% endif %}
+        <img id = "ph" src="{% static 'images/photo.png' %}">
+    </div>
 
 
-</div>
        <!--  <br>
         <button type="button" onclick="addFriend()"> 加為好友</button> -->
 <div id = "post">
+
+	<div id="sendPost">
+		<div id="postTop">建立貼文</div>
+		<div id="postBody">
+		<img class = "postFace" src="{% static 'images/cat.jpeg' %}" alt="Avatar">
+		<textarea id = "content" name="Content" placeholder="說點什麼" style="resize:none;width:400px;height:120px;"></textarea>
+		</div>
+		<div style="width:95%; height:2px; background: #F7F8FA; margin-bottom: 5px;"></div>
+		<input type="file" name="user_image" value="新增圖片" multiple>
+		<button type="button" onclick="sendPost()"> 送出</button>
+	
+	</div>
+	<div id="posts">
 	{% for post in posts %}
-		<li> {{post.name}}</li>
-        <li> {{ post.date }} </li>
-        <li> {{ post.content }} </li>
-        <button type="button" onclick="like({{ post.id }})"> 按讚</button>
-        <br>
+	<div id="postForm">
+		
+		<div id="title">
+			<img class="postFace" src="{% static 'images/cat.jpeg' %}" alt="Avatar">
+			<span id="name">{{post.name}}</span>
+			<span id="date">{{ post.date }} </span>
+		</div>
+        <p> {{ post.content }} </p>
+        <a onclick="like({{ post.id }})"> 讚</a>
+    </div>
+    
 	{% endfor %}
 </div>
 
+</div>
+<div id="noticiations">
+	<img id = "noti" src="{% static 'images/n.png' %}">
+</div>
+<div hidden id="chat">
 <div id = "chatlist">
 	{% for user in chats %}
 		<li onclick="chooseUser({{user.user_id}})"> {{user.name}}</li>
@@ -55,10 +96,11 @@
 	<input id="chat" type="text">
 	<button type="button" onclick="sendChat()"> 送出</button>
 <br>
-{% for photo in photos%}
+</div>
+<!-- {% for photo in photos%}
 <img src="{{photo.photo.url}}" width='200px' heigth='200px'>
-{% endfor %}
-
+{% endfor %} -->
+</div>
 
 </body>
 </html>

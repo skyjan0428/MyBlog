@@ -7,7 +7,7 @@ from urllib.parse import unquote
 import json
 from django.http import JsonResponse
 from django.db.models import Q
-# import datetime
+import datetime
 # Create your views here.
 
 
@@ -37,7 +37,7 @@ def index(request):
 	global forms
 	if checkLogin(request):
 		user = getUserByToken(request.COOKIES['token'])
-		return information(request, user)
+		return information(request, user.user_id)
 		# return render(request, 'main.html', {'posts': getPosts(request), 'users':getUserList(request)})
 	return render(request, 'login.html', forms)
 
@@ -55,8 +55,9 @@ def getPosts(request, user=None):
 		posts = Post.objects.all().order_by('-date')
 	lst = []
 	for post in posts:
+		# print(type(post.date))
 		data = {
-		'date':post.date,
+		'date':post.date.strftime("%Y-%m-%d"),
 		'content': post.content,
 		'id': post.post_id,
 		'name': post.user_id.name
@@ -127,7 +128,7 @@ def likePost(request, data):
 
 global operate
 operate={
-	'1':likePost,
+	'likepost':likePost,
 }
 
 
@@ -153,11 +154,12 @@ revise_action = {
 	'1': createDescription,
 }
 
-def information(request, informations):
+def information(request, id):
 	if not checkLogin(request):
 		return JsonResponse({'status':False, 'data':{}})
 	# informations = User.objects.filter(user_id=id).first()
 	user = getUserByToken(request.COOKIES['token'])
+	informations = User.objects.get(user_id=id)
 	replyDic = {}
 	replyDic['User'] = informations
 	replyDic['posts'] = getPosts(request,informations)
@@ -230,8 +232,11 @@ def post(request):
 			new_post = Post(content = data['content'], user_id = user_id)
 			new_post.save()
 			data = {
-			'content': new_post.content,
-			'date': new_post.date,
+				'content': new_post.content,
+				'date': new_post.date.strftime("%Y-%m-%d"),
+				'post_id': new_post.post_id,
+				'name':user_id.name,
+				'photo': Photo.objects.get(user_id=user_id).photo.url
 			}
 			return JsonResponse({'status':True, 'data':data})
 
