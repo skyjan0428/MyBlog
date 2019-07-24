@@ -204,11 +204,10 @@ function leaveMessage(id){
   fd.append('content', content)
   fd.append('attach_id', id)
   function success(data){
-    console.log(data);
     if (data.status) { 
         var outside = document.createElement("DIV");
         outside.className = "messages";
-        outside.id = 'message' + data.data.post_id;
+        outside.id = 'messages' + data.data.post_id;
         var img = document.createElement("IMG");
         img.src = data.data.userPhoto;
         img.className = "postFace";

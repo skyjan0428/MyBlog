@@ -139,16 +139,19 @@ body{
 }
 #leaveMessage{
 	width: 100%;
-	height: auto;
-}
-#leaveMessage textarea{
+	height: 30px;
 	border-style:none;
-	width: 100%;
 	background-color: #F2F3F5;
 	border-radius: 10px;
+
+}
+#leaveMessage textarea{
+	border:none;
+	width: 100%;
 	resize:none;
-	display:inline-block;
-	vertical-align: middle;
+	margin:5px;
+	height:15px;
+	background: transparent;
 }
 
 #postBody{
@@ -193,7 +196,7 @@ a:hover {
 
 .messages{
 	display:flex;
-	margin-bottom: 10px;
+	/*margin-bottom: 10px;*/
 }
 
 .messages div{
@@ -202,7 +205,8 @@ a:hover {
 	border-radius: 10px;
 	padding: 2px 5px 2px 5px;
 	margin-left: 10px;
-	height: auto;
+	/*height: 18px;*/
+	height:auto;
 	word-break: break-all;
 	font-size: 10px;
 	text-align: left;

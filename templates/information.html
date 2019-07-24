@@ -83,8 +83,7 @@
         <button onclick=""> 留言</button>
         <button onclick=""> 分享</button>
         </div>
-        <br>
-        <div style="width:100%; height:2px; background: #F7F8FA; margin-bottom: 8px;"></div>
+        <div style="width:100%; height:2px; background: #F7F8FA; margin-top: 8px;margin-bottom: 8px;"></div>
     	
     	<div id="message{{post.id}}">
     		{% for message in post.messages %}
@@ -96,7 +95,7 @@
     		{% endfor %}
     	</div>
         <div id="leaveMessage">
-        	<textarea id="mess{{post.id}}" onkeypress="onTestChange({{post.id}})"></textarea>
+        	<textarea placeholder="留言" id="mess{{post.id}}" onkeypress="onTestChange({{post.id}})"></textarea>
         </div>
     </div>
     
