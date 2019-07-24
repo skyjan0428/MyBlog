@@ -11,6 +11,9 @@ function sendAjax(data, path, type,dataType, success, error){
 }
 function sendPost(){
   var content = document.getElementById("content").value;
+  if(content == "")
+    return;
+  document.getElementById("content").value = "";
   var fd = new FormData();
   var files = $('#file')[0].files[0];
   fd.append('files',files);
@@ -20,12 +23,36 @@ function sendPost(){
     console.log(data);
     if (data.status) { 
         var dv = document.createElement("DIV");
-        dv.id='postForm';
+        dv.className='postForm';
         var photo = ""
         if(data.data.contentPhoto)
           photo = "<img class='postContentImg' src='"+data.data.contentPhoto+"'><br>"
         
-        dv.innerHTML = "<div id='title'> <img class='postFace' src='"+data.data.userPhoto+"' > <span id='name'>"+data.data.name+"</span><span id='date'>"+data.data.date+"</span>"+"</div><p>"+data.data.content+"</p>" + photo + "<a onclick='like("+data.data.post_id+")'>讚</a>";
+        // dv.innerHTML = "<div id='title'> <img class='postFace' src='"+data.data.userPhoto+"' > <span id='name'>"+data.data.name+"</span><span id='date'>"+data.data.date+"</span>"+"</div><p>"+data.data.content+"</p>" + photo + "<a onclick='like("+data.data.post_id+")'>讚</a>";
+        
+
+        dv.innerHTML = '<div class="title">' +
+                              '<img class="postFace" src="'+data.data.userPhoto+'" alt="Avatar">' +
+                              '<span class="name">'+data.data.name+'</span>'+
+                              '<span class="date">'+data.data.date+'</span>'+
+                          '</div>'+
+                          '<p align="left"> '+data.data.content+'</p>'+
+                          photo +
+                          '<div style="width:97%; height:2px; background: #F7F8FA; margin-bottom: 5px; margin-top: 10px;"></div>'+
+                          '<div class = "title">'+
+                              '<button onclick="like('+data.data.post_id+')"> 讚</button>' + 
+                              '<button onclick=""> 留言</button>' +
+                              '<button onclick=""> 分享</button>' +
+                          '</div>' +
+                          '<div style="width:100%; height:2px; background: #F7F8FA; margin-top: 8px;margin-bottom: 8px;"></div>' +
+                          '<div id="message'+data.data.post_id+'">'+
+                          '</div>'+
+                          '<div id="leaveMessage">' +
+                              '<textarea placeholder="留言" id="mess'+data.data.post_id+'" onkeypress="onTestChange('+data.data.post_id+')"></textarea>' +
+                          '</div>';
+
+
+
         var posts = document.getElementById('posts')
         posts.insertBefore(dv, posts.firstChild);
 
@@ -51,7 +78,11 @@ function like(id){
   function success(data) {
       console.log(data)
       if (data.status) { 
-        
+        document.getElementById('like'+id).innerHTML = "讚 " + data.data.likes;
+        button = document.getElementById('like_button'+id);
+        if(button.textContent.indexOf("收回讚") != -1)
+          button.textContent ="讚";
+        else button.textContent  = "收回讚";
       }
    }
   function error(jqXHR) {

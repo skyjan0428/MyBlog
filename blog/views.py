@@ -41,19 +41,20 @@ def getUserList(request, user=None):
 		users = User.objects.all()
 	return users
 
-def getPosts(request, user=None):
+def getPosts(request, user=None, onwer=None):
 	if user:
 		posts = Post.objects.filter(user_id=user, attach_id=None).order_by('-date')
 	else:
 		posts = Post.objects.all().order_by('-date')
 	lst = []
 	for post in posts:
-		
 		data = {
 			'date':post.date.strftime("%Y-%m-%d"),
 			'content': post.content,
 			'id': post.post_id,
 			'name': post.user_id.name,
+			'likes': len(LikePost.objects.filter(post_id=post.post_id)),
+			'hasLike': LikePost.objects.filter(post_id=post.post_id, user_id=onwer.user_id).first(),
 			'userPhoto': Photo.objects.get(user_id=post.user_id, is_sticker=True).photo.url,
 		}
 		attachPost = Post.objects.filter(attach=post)
@@ -62,6 +63,7 @@ def getPosts(request, user=None):
 			m = {
 				'id': p.post_id,
 				'name': p.user_id.name,
+				'user_id':p.user_id.user_id,
 				'content':p.content,
 				'userPhoto': Photo.objects.get(user_id = p.user_id, is_sticker = True).photo.url,
 			}
@@ -130,7 +132,8 @@ def likePost(request, data):
 		else:
 			likePost = LikePost(post_id = post, user_id=user)
 			likePost.save()
-		return JsonResponse({'status':True, 'data':{}})
+		
+		return JsonResponse({'status':True, 'data':{'likes': len(LikePost.objects.filter(post_id=post))}})
 	else:
 		return JsonResponse({'status':False, 'data':{}})
 
@@ -170,10 +173,10 @@ def information(request, id):
 	informations = User.objects.get(user_id=id)
 	replyDic = {}
 	replyDic['User'] = informations
-	replyDic['posts'] = getPosts(request,informations)
+	replyDic['posts'] = getPosts(request,informations, user)
 	replyDic['chats'] = getUserList(request, user)
-	photos = Photo.objects.filter(user_id = informations)
-	replyDic['photos'] = photos
+	photo = Photo.objects.filter(user_id = informations, is_sticker=True).first()
+	replyDic['photo'] = photo
 
 	if user and user!=informations:
 		relationship1 = Relationship.objects.filter(user_id1 = user, user_id2 = informations).first()

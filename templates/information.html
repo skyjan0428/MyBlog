@@ -24,9 +24,10 @@
 	</div>
 
 </div>
+
 <div id = "information" align="center">
 	<div id="intro">
-	<img id = "userPhoto" src="{% static 'images/cat.jpeg' %}" alt="Avatar">
+	<img id = "userPhoto" src="{{photo.photo.url}}">
 		<h3>{{ User.name }} </h3>
 	<div id="makeDescription">
 		{% if User.description %}
@@ -35,7 +36,7 @@
 	</div>
 	<a onclick="createDescription()" href="#"> 更新簡介</a>
 
-        <li> {{ User.email }} </li>
+        <!-- <li> {{ User.email }} </li> -->
         {% if addFriend %}
         <button type="button" onclick="addFriend({{User.user_id}})"> 加為好友</button>
         {% endif %}
@@ -65,21 +66,29 @@
 	
 	</div>
 	<div id="posts">
+
 	{% for post in posts %}
-	<div id="postForm">
+	<div class="postForm">
 		<div class="title">
 			<img class="postFace" src="{{post.userPhoto}}" alt="Avatar">
-			<span id="name">{{post.name}}</span>
-			<span id="date">{{ post.date }} </span>
+			<span class="name">{{post.name}}</span>
+			<span class="date">{{ post.date }} </span>
 
 		</div>
-        <p> {{ post.content }} </p>
+        <p align="left"> {{ post.content }} </p>
         {% if post.contentPhoto %}
         <img class="postContentImg" src="{{post.contentPhoto}}"><br>
         {% endif %}
+        <p align="left" style="color:#4267B2; font-size: 10px;" id="like{{post.id}}"> 讚&nbsp;{{post.likes}}</p>
         <div style="width:97%; height:2px; background: #F7F8FA; margin-bottom: 5px; margin-top: 10px;"></div>
         <div class = "title">
-        <button onclick="like({{ post.id }})"> 讚</button>
+        <button id = "like_button{{ post.id }}" onclick="like({{ post.id }})"> 
+        {% if post.hasLike %}	
+       	收回讚
+       	{% else %}
+       	讚
+       	{% endif %}
+        </button>
         <button onclick=""> 留言</button>
         <button onclick=""> 分享</button>
         </div>
@@ -89,7 +98,7 @@
     		{% for message in post.messages %}
     		<div class="messages" id = 'message{{message.id}}'>
 	    		<img class="postFace" src="{{message.userPhoto}}" alt="Avatar">
-	    		<div> <a href="/information/1"> {{message.name}}</a> {{message.content}}</div>
+	    		<div> <a href="/information/{{message.user_id}}"> {{message.name}}</a> {{message.content}}</div>
     		</div>
     		<br>
     		{% endfor %}
