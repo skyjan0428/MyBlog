@@ -11,24 +11,40 @@ function sendAjax(data, path, type,dataType, success, error){
 }
 function sendPost(){
   var content = document.getElementById("content").value;
-  data = { 
-    content: content, 
-    token: getCookie('token')
-  }
+  var fd = new FormData();
+  var files = $('#file')[0].files[0];
+  fd.append('files',files);
+  fd.append('token', getCookie('token'))
+  fd.append('content', content)
   function success(data){
+    console.log(data);
     if (data.status) { 
         var dv = document.createElement("DIV");
         dv.id='postForm';
-        dv.innerHTML = "<div id='title'> <img class='postFace' src='"+data.data.photo+"' > <span id='name'>"+data.data.name+"</span><span id='date'>"+data.data.date+"</span>"+"</div><p>"+data.data.content+"</p><a onclick='like("+data.data.post_id+")'>讚</a>";
+        var photo = ""
+        if(data.data.contentPhoto)
+          photo = "<img class='postContentImg' src='"+data.data.contentPhoto+"'><br>"
+        
+        dv.innerHTML = "<div id='title'> <img class='postFace' src='"+data.data.userPhoto+"' > <span id='name'>"+data.data.name+"</span><span id='date'>"+data.data.date+"</span>"+"</div><p>"+data.data.content+"</p>" + photo + "<a onclick='like("+data.data.post_id+")'>讚</a>";
         var posts = document.getElementById('posts')
         posts.insertBefore(dv, posts.firstChild);
 
     }
   }
   function error(data){
-    console.log(jqXHR)
+    console.log(data)
   }
-  sendAjax(data,"/sendPost/","POST", "json", success, error)
+  $.ajax({
+            type: "POST", //傳送方式
+            url: "/sendPost/", //傳送目的地
+            enctype: 'multipart/form-data',
+            data: fd,
+            contentType: false,
+            processData: false,
+            success: success,
+            error: error,
+        });
+
 }
 
 function like(id){
@@ -84,6 +100,10 @@ function addFriend(id){
   }
   sendAjax(data,"/information/addFriend/","POST", "json", success, error)
     
+}
+
+function leaveMessage(id){
+  document.getElementById("leaveMessage").style.display = "block";
 }
 
 
@@ -158,6 +178,75 @@ chatSocket.onmessage = function(e) {
 chatSocket.onclose = function(e) {
   console.error('Chat socket closed unexpectedly');
 };
+function onTestChange(id) {
+    var key = window.event.keyCode;
+
+    // If the user has pressed enter
+    if (key === 13) {
+      value = document.getElementById("mess"+id).value;
+      console.log(value)
+      if(value != "")
+        leaveMessage(id);
+
+    }
+    else {
+        return true;
+    }
+}
+
+function leaveMessage(id){
+  var content = document.getElementById("mess"+id).value;
+  document.getElementById("mess"+id).value = "";
+  var fd = new FormData();
+  var files = $('#file')[0].files[0];
+  fd.append('files',files);
+  fd.append('token', getCookie('token'))
+  fd.append('content', content)
+  fd.append('attach_id', id)
+  function success(data){
+    console.log(data);
+    if (data.status) { 
+        var outside = document.createElement("DIV");
+        outside.className = "messages";
+        outside.id = 'message' + data.data.post_id;
+        var img = document.createElement("IMG");
+        img.src = data.data.userPhoto;
+        img.className = "postFace";
+        var div = document.createElement("DIV");
+        var a = document.createElement("A");
+        a.append(data.data.name);
+        div.append(a);
+        div.append(data.data.content);
+
+        // var photo = ""
+        // if(data.data.contentPhoto)
+        //   photo = "<img class='postContentImg' src='"+data.data.contentPhoto+"'><br>"
+        // dv.innerHTML = "<div id='title'> <img class='postFace' src='"+data.data.userPhoto+"' > <span id='name'>"+data.data.name+"</span><span id='date'>"+data.data.date+"</span>"+"</div><p>"+data.data.content+"</p>" + photo + "<a onclick='like("+data.data.post_id+")'>讚</a>";
+        
+        // dv.innerHTML = "<img class='postFace' src='"+data.data.userPhoto+"'' alt='Avatar'><div> <a href='/information/1>"+ data.data.name + "</a></div>";
+        var posts = document.getElementById('message'+data.data.attach_id)
+        outside.append(img);
+        outside.append(div);
+        posts.append(outside);
+
+    }
+  }
+  function error(data){
+    console.log(data)
+  }
+  $.ajax({
+            type: "POST", //傳送方式
+            url: "/sendPost/", //傳送目的地
+            enctype: 'multipart/form-data',
+            data: fd,
+            contentType: false,
+            processData: false,
+            success: success,
+            error: error,
+  });
+
+}
+
 
 // document.querySelector('#chat-message-input').focus();
 

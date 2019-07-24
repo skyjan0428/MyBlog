@@ -54,7 +54,9 @@ class Photo(models.Model):
 	photo_id = models.AutoField(primary_key=True)
 	photo = models.ImageField(upload_to='photo/')
 	user_id = models.ForeignKey(User,related_name='photo_user_id', on_delete=models.PROTECT, default='')
+	is_sticker = models.BooleanField(default=False)
 	date = models.DateTimeField('Datetime', auto_now=True)
+	post_id = models.ForeignKey(Post,related_name='photo_post_id', on_delete=models.PROTECT, default='', null = True)
 
 
 

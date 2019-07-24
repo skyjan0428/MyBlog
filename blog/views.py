@@ -16,13 +16,6 @@ global forms
 forms = {'form':SignUpForm, 'signin': LoginForm,}
 
 
-def testJson(request):
-	posts = Post.objects.filter(attach=None)
-	for post in posts:
-		print(post.content)
-	return JsonResponse({'foo':'bar'})
-
-
 
 def add(request):
     if request.method == "POST":
@@ -50,18 +43,33 @@ def getUserList(request, user=None):
 
 def getPosts(request, user=None):
 	if user:
-		posts = Post.objects.filter(user_id=user).order_by('-date')
+		posts = Post.objects.filter(user_id=user, attach_id=None).order_by('-date')
 	else:
 		posts = Post.objects.all().order_by('-date')
 	lst = []
 	for post in posts:
-		# print(type(post.date))
+		
 		data = {
-		'date':post.date.strftime("%Y-%m-%d"),
-		'content': post.content,
-		'id': post.post_id,
-		'name': post.user_id.name
+			'date':post.date.strftime("%Y-%m-%d"),
+			'content': post.content,
+			'id': post.post_id,
+			'name': post.user_id.name,
+			'userPhoto': Photo.objects.get(user_id=post.user_id, is_sticker=True).photo.url,
 		}
+		attachPost = Post.objects.filter(attach=post)
+		messages = []
+		for p in attachPost:
+			m = {
+				'id': p.post_id,
+				'name': p.user_id.name,
+				'content':p.content,
+				'userPhoto': Photo.objects.get(user_id = p.user_id, is_sticker = True).photo.url,
+			}
+			messages.append(m)
+		data['messages'] = messages
+		photo = Photo.objects.filter(post_id=post).first()
+		if photo:
+			data['contentPhoto'] = photo.photo.url
 		lst.append(data)
 	return lst
 
@@ -225,19 +233,44 @@ def login(request):
 @csrf_exempt
 def post(request):
 	if request.method == 'POST':
-		data = getRequestData(request)
-		token = data['token'].replace('\"', '')
+		image = request.FILES.get('files')
+		if image:
+			image_types = [
+	                'image/png', 'image/jpg',
+	                'image/jpeg', 'image/pjpeg', 'image/gif'
+	        ]
+			if image.content_type not in image_types:
+				data = {
+					'status': False,
+					'error': 'Bad image format.'
+				}
+				return JsonResponse(data)
+
+		content = request.POST.get('content')
+		token = request.POST.get('token').replace('\"', '')
 		user_id = Token.objects.get(token=token).user_id
+		attach_id = request.POST.get('attach_id')
+		
 		if user_id:
-			new_post = Post(content = data['content'], user_id = user_id)
+			if attach_id:
+				new_post = Post(content = content, user_id = user_id, attach=Post.objects.get(post_id = attach_id))
+			else:
+				new_post = Post(content = content, user_id = user_id)
 			new_post.save()
 			data = {
 				'content': new_post.content,
 				'date': new_post.date.strftime("%Y-%m-%d"),
 				'post_id': new_post.post_id,
 				'name':user_id.name,
-				'photo': Photo.objects.get(user_id=user_id).photo.url
+				'userPhoto': Photo.objects.get(user_id=user_id, is_sticker=True).photo.url,
 			}
+			if image:
+				photo = Photo(user_id=user_id, photo=image, post_id = new_post)
+				photo.save()
+				data['contentPhoto'] = photo.photo.url
+			if attach_id:
+				data['attach_id'] = attach_id
+			
 			return JsonResponse({'status':True, 'data':data})
 
 	return JsonResponse({'status':False, 'data':{}})
@@ -262,7 +295,6 @@ def checkLogin(request):
 		tokens = Token.objects.get(token=token)
 		return True
 	except:
-		print('token:' , 0)
 		return False
 
 def generate_token(key, expire=3600):
@@ -273,11 +305,78 @@ def generate_token(key, expire=3600):
     b64_token = base64.urlsafe_b64encode(token.encode("utf-8"))
     return b64_token.decode("utf-8")
 
+
 def getUserByToken(token):
-	user = Token.objects.get(token=token).user_id
-	if user:
-		return user
-	return None
+	try:
+		return Token.objects.get(token=token).user_id
+	except:
+		return None
+
+
+
+def SignIn(request):
+	if request.method == 'POST':
+		data = getRequestData(request)
+		email = data['email']
+		password = data['password']
+		user = User.objects.get(email=email)
+		if not user:
+			return JsonResponse({'status':True, 'data':{
+				'SignIn': False,
+				'Message': 'input email is not exist.'
+			}})
+		if check_password(user.password, password):
+			token = generate_token(user.email)
+			t = Token(user_id=user, token=token)
+			t.save()
+			return JsonResponse({'status':True, 'data':{
+				'SignIn': True,
+				'Message': '',
+				'token': t 
+			}})
+	return JsonResponse({'status':True, 'data':{
+				'SignIn': False,
+				'Message': 'password is not correct',
+			}})	
+def SignUpApi(request):
+	if request.method == 'POST':
+		data = getRequestData(request)
+		if User.objectl.get(email=data['email']):
+			return JsonResponse({'status':True, 'data':{
+				'SignIn': False,
+				'Message': 'input email is not exist.'
+			}})
+		user = User(name=data['name'],password=make_password(data[password]),email=data['email'])
+		user.save()
+		return JsonResponse({'status':True, 'data':{
+				'SignIn': True,
+				'Message': '',
+				'token': user 
+		}})
+
+	return render(request, 'login.html', forms)
+
+
+# class RequestOperate():
+# 	def __init__(self, request):
+# 		self.request = request
+# 		self.data = getRequestData()
+# 		self.user = getUserByToken()
+# 		self.isAuth = self.user==None
+# 	def getRequestData(self):
+# 		rows = self.request.body.decode().split('&')
+# 		data = {}
+# 		for row in rows:
+# 			row = row.split('=')
+# 			data[row[0]] = unquote(row[1])
+# 		return data		
+# 	def getUserByToken(self):
+# 		try:
+# 			return Token.objects.get(token=self.data['token']).user_id
+# 		except:
+# 			return None
+
+
 # def certify_token(key, token):
 #     token_str = base64.urlsafe_b64decode(token).decode('utf-8')
 #     token_list = token_str.split(':')

@@ -69,7 +69,7 @@ body{
 	border-color:#D8DEE2;
 	/*margin:20%;*/
 	background-color: white;
-	border-radius:10px;
+	border-radius:5px;
 	border-width: thin;
 	padding: 30px 10px 30px 10px;
 	margin-top: 20px;
@@ -114,9 +114,9 @@ body{
 	border-color:#D8DEE2;
 	/*margin:20%;*/
 	background-color: white;
-	border-radius:10px;
+	border-radius:5px;
 	border-width: thin;
-	padding: 30px 10px 30px 10px;
+	padding: 30px 10px 15px 10px;
 	margin-top: 20px;
 
 }
@@ -127,20 +127,33 @@ body{
 	border-color:#D8DEE2;
 	/*margin:20%;*/
 	background-color: white;
-	border-radius:10px;
+	border-radius:5px;
 	border-width: thin;
 	margin-top: 20px;
 }
 
-#title{
+.title{
 	display:flex;
 	/*align-items: center; */
 	/*justify-content: center;*/
 }
+#leaveMessage{
+	width: 100%;
+	height: auto;
+}
+#leaveMessage textarea{
+	border-style:none;
+	width: 100%;
+	background-color: #F2F3F5;
+	border-radius: 10px;
+	resize:none;
+	display:inline-block;
+	vertical-align: middle;
+}
 
 #postBody{
 	display:flex;
-	padding: 10px 10px 1px 10px;
+	padding: 10px 10px 0px 10px;
 	/*align-items: center; */
 	/*justify-content: center;*/
 }
@@ -158,14 +171,14 @@ a{
 	text-decoration:none;
 	font-size: 10px;
 }
-#postForm a{
+#postForm button{
 	color:#9DCCE9;
-	text-decoration:none;
 	font-size: 10px;
-
-}
-#postForm a:hover {
-    color: #2F97D1;
+	padding: 0;
+	border: none;
+	background: none;
+	margin-right: 14%;
+	margin-left: 14.5%;
 }
 #top a{
 	margin-left: 30px;
@@ -178,10 +191,37 @@ a:hover {
     color: white;
 }
 
+.messages{
+	display:flex;
+	margin-bottom: 10px;
+}
+
+.messages div{
+	border-style:none;
+	background-color: #F2F3F5;
+	border-radius: 10px;
+	padding: 2px 5px 2px 5px;
+	margin-left: 10px;
+	height: auto;
+	word-break: break-all;
+	font-size: 10px;
+	text-align: left;
+}
+.messages div a{
+	margin-right: 10px;
+	height: 100%;
+}
+
 #mark{
 	color:white;
 	font-size: 20px;
 }
+
+.postContentImg{
+	width: 100%;
+    height: auto;
+}
+
 #search{
 	border-radius:5px;
 	width: 300px;
