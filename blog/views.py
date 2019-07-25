@@ -97,19 +97,32 @@ def addFriend(request):
 def openChatRoom(request):
 	if not checkLogin(request):
 		return JsonResponse({'status':False, 'data':{}})
-	try:
-		user = getUserByToken(request.COOKIES['token'])
-		reciever = getRequestData(request)['reciever']
-		messages = Message.objects.filter(Q(sender=user, reciever=reciever) | Q(sender=reciever, reciever=user)).order_by("date")
-		lst = []
-		for message in messages:
-			dic = {}
-			dic['message_id'] = message.message_id
-			dic['text'] = ('You : ' if message.sender == user else (message.sender.name + " : ")) + message.text
-			lst.append(dic)
-		return JsonResponse({'status':True, 'data':lst})
-	except:
-		return JsonResponse({'status':False, 'data':{}})
+	# try:
+	data = getRequestData(request)
+	reciever = User.objects.get(user_id=data['reciever'])
+	user = getUserByToken(data['token'].replace('\"', ''))
+
+	messages = Message.objects.filter(Q(sender=user, reciever=reciever) | Q(sender=reciever, reciever=user)).order_by("date")
+	lst = []
+	for message in messages:
+		dic = {}
+		dic['user_id'] = message.sender.user_id
+		dic['message_id'] = message.message_id
+		dic['text'] = message.text
+		lst.append(dic)
+	photo = Photo.objects.filter(user_id=reciever.user_id, is_sticker=True).first()
+	data = { 
+		'messages':lst,
+		'reciever':{
+				'id': reciever.user_id,
+				'photo' : photo if photo else Photo.objects.get(photo_id=11).photo.url,
+				'name':reciever.name 
+		}
+	}
+	return JsonResponse({'status':True, 'data':data})
+	# except Exception as e:
+		# print(e)
+		# return JsonResponse({'status':False, 'data':{}})
 
 
 

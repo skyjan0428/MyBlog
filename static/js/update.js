@@ -96,28 +96,7 @@ function like(id){
   sendAjax(data,"/postoperation/","POST", "json", success, error)
 }
 
-var user_id = "";
-function chooseUser(id){
-  user_id = id;
-  document.getElementById('chatRoom').value = "";
-  function success(data) {
-      if (data.status) { 
-          lst = data['data']
-          var chatRoom = document.getElementById('chatRoom');
-          lst.forEach(function(e){
-              chatRoom.value += "\n"+ e['text'];
-          });
-      }
-   }
-  function error(jqXHR) {
-      console.log(jqXHR)
-  }
-  data={ 
-    token: getCookie('token'),
-    'reciever': user_id,
-  }
-  sendAjax(data,"/openChatRoom/","POST", "json", success, error)
-}
+
 function addFriend(id){
   function success(data) {
       console.log(data)
@@ -275,6 +254,75 @@ function leaveMessage(id){
             error: error,
   });
 
+}
+
+function hiddenBody(id){
+  var chatBody = document.getElementById("chatBody"+id);
+  var chatRoom = document.getElementById("chatRoom"+id);
+  if(chatBody.style.display == 'none'){
+    chatBody.style.display = "block";
+    chatRoom.style.height = '300px';
+    chatRoom.style.width = '250px';
+  }
+  else{
+    chatBody.style.display = 'none';
+    chatRoom.style.height = '40px';
+    chatRoom.style.width = '170px';
+  }
+  
+}
+
+function openChat(id){
+  function success(data) {
+    console.log(data);
+      if (data.status) { 
+        var chatRoom = document.createElement("DIV");
+        chatRoom.id = 'chatRoom'+data.data.reciever.id;
+        chatRoom.className = 'chatRoom';
+        var messages = data.data.messages;
+        m = '';
+        messages.forEach(function(element){
+          if(element.user_id == data.data.reciever.id){
+            m += '<div style = "display: flex; justify-content: flex-start;">'+
+                    '<div class="chatLeft" align="left"> '+
+                      element.text+
+                    '</div>' +
+                  '</div>'
+          }else{
+            m += '<div style = "display: flex; justify-content: flex-end;">'+
+                    '<div class="chatRight" align="right"> '+
+                      element.text+
+                    '</div>' +
+                  '</div>'
+          }
+        });
+        chatRoom.innerHTML = '<div class="chatRoomTitle" onclick="hiddenBody('+data.data.reciever.id+')"><img id = "cat" src="'+data.data.reciever.photo+'" alt="Avatar">&nbsp;&nbsp;&nbsp; '+ data.data.reciever.name+' </div>'+
+                                '<div id="chatBody'+data.data.reciever.id+'">'+
+                                '<div style="width:100%; height:2px; background: #F7F8FA; margin-top: 8px;margin-bottom: 8px;"></div>'+
+                                '<div class="chatRoomContent">'+ m +'</div>' +
+                                '<div style="width:100%; height:2px; background: #F7F8FA; margin-top: 8px;margin-bottom: 8px;"></div>'+
+                                '<input id="inputChat" placeholder="輸入訊息" type="text">'+
+                              '</div>'
+        
+        
+
+          var chatRooms = document.getElementById('chatRooms');
+          chatRooms.append(chatRoom);
+          // lst = data['data']
+          // var chatRoom = document.getElementById('chatRoom');
+          // lst.forEach(function(e){
+          //     chatRoom.value += "\n"+ e['text'];
+          // });
+      }
+   }
+  function error(jqXHR) {
+      console.log(jqXHR)
+  }
+  data={ 
+     'token': getCookie('token'),
+    'reciever': id,
+  }
+  sendAjax(data,"/openChatRoom/","POST", "json", success, error)
 }
 
 

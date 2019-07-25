@@ -26,6 +26,7 @@
 </div>
 
 <div id = "information" align="center">
+	<!-- <div id = "main" align="center"> -->
 	<div id="intro">
 	<img id = "userPhoto" src="{{photo.photo.url}}">
 		<h3>{{ User.name }} </h3>
@@ -81,7 +82,7 @@
         {% endif %}
         <p align="left" style="color:#4267B2; font-size: 10px;" id="like{{post.id}}"> 讚&nbsp;{{post.likes}}</p>
         <div style="width:97%; height:2px; background: #F7F8FA; margin-bottom: 5px; margin-top: 10px;"></div>
-        <div class = "title">
+        <div class = "leaveMessageButton">
         <button id = "like_button{{ post.id }}" onclick="like({{ post.id }})"> 
         {% if post.hasLike %}	
        	收回讚
@@ -115,25 +116,53 @@
 <div id="noticiations">
 	<img id = "noti" src="{% static 'images/n.png' %}">
 </div>
-<div hidden id="chat">
+
+<div id="chat">
 <div id = "chatlist">
 	{% for user in chats %}
-		<li onclick="chooseUser({{user.user_id}})"> {{user.name}}</li>
+	<button class="chatButton" id="chatButton{{user.user_id}}" onclick="openChat({{user.user_id}})"> 
+		<img id = "cat" src="{% static 'images/cat.jpeg' %}" alt="Avatar"> &nbsp;&nbsp; {{user.name}}
+	</button>
+	
 	{% endfor %}
+	<!-- onclick="chooseUser({{user.user_id}})" -->
 </div>
 
-<textarea id = "chatRoom" name="chatroom" style="width:400px;height:120px;">
-</textarea>
-	<input id="chat" type="text">
-	<button type="button" onclick="sendChat()"> 送出</button>
-<br>
 </div>
+<div id="chatRooms">
+
+
+<!-- 
+<div id="chatRoom" class="chatRoom">
+	<div class="chatRoomTitle" onclick="hiddenBody('')"><img id = "cat" src="{% static 'images/cat.jpeg' %}" alt="Avatar">&nbsp;&nbsp;&nbsp; 詹之愷 </div>
+	<div id="chatBody">
+	<div style="width:100%; height:2px; background: #F7F8FA; margin-top: 8px;margin-bottom: 8px;"></div>
+	<div class="chatRoomContent">
+		<div style = "display: flex; justify-content: flex-end;">
+			<div class="chatRight" align="right"> 
+				我是小雨
+			</div>
+		</div>
+		<div style = "display: flex; justify-content: flex-start;">
+		<div class="chatLeft" align=left> 
+			我愛你
+		</div>
+		</div>
+		<div style = "display: flex; justify-content: flex-end;">
+			<div class="chatRight" align="right"> 
+				你愛我嗎
+			</div>
+		</div>
+	</div>
+	<div style="width:100%; height:2px; background: #F7F8FA; margin-top: 8px;margin-bottom: 8px;"></div>
+	<input id="inputChat" placeholder="輸入訊息" type="text">
+	</div>
+</div> -->
 <!-- {% for photo in photos%}
 <img src="{{photo.photo.url}}" width='200px' heigth='200px'>
 {% endfor %} -->
 </div>
-
-
+</div>
 
 
 </body>
