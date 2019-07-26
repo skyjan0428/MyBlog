@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
 from urllib.parse import unquote
 import json
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from django.db.models import Q
 import datetime
 # Create your views here.
@@ -15,35 +15,68 @@ global forms
 
 forms = {'form':SignUpForm, 'signin': LoginForm,}
 
-
-
-def add(request):
-    if request.method == "POST":
-        user_img = request.FILES.get('user_image')
-        photo = Photo(user_id=getUserByToken(request.COOKIES['token']), photo=user_img)
-        photo.save()
-        
-    return render(request, 'adPhoto.html', locals())
-
+def photopage(request):
+	return render(request, 'photo.html', locals())
 
 def index(request):
-	global forms
-	if checkLogin(request):
-		user = getUserByToken(request.COOKIES['token'])
-		return information(request, user.user_id)
-		# return render(request, 'main.html', {'posts': getPosts(request), 'users':getUserList(request)})
-	return render(request, 'login.html', forms)
-
-def getUserList(request, user=None):
+	token = request.COOKIES['token']
+	user = getUserByToken(token)
 	if user:
-		users = User.objects.exclude(user_id=user.user_id)
+		return information(request, id=user.id)
+	return render(request, 'login.html', locals())
+
+def information(request, id=None):
+	token = request.COOKIES['token']
+	user = getUserByToken(token)
+	informations = User.objects.get(id=id)
+	replyDic = {}
+	replyDic['User'] = informations
+	replyDic['posts'] = getPosts(request,informations, user)
+	replyDic['chats'] = getChatList(request, user)
+	replyDic['photo'] = getUserPhoto(informations)
+
+	# if user and user!=informations:
+	# 	relationship1 = Relationship.objects.filter(user_id1 = user, user_id2 = informations).first()
+	# 	relationship2 = Relationship.objects.filter(user_id1 = informations, user_id2 = user).first()
+	# 	if relationship1:
+	# 		if relationship1.value == 0:
+	# 			replyDic['text'] = 'waiting'
+	# 			# return render(request, 'information.html', {'User': informations, 'text':"waiting"})
+	# 		else:
+	# 			replyDic['text'] = 'AlreadyFriend'
+	# 			# return render(request, 'information.html', {'User': informations, 'text':"AlreadyFriend"})
+	# 	elif relationship2:
+	# 		if relationship2.value == 0:
+	# 			replyDic['waitConfirm'] = informations.user_id
+	# 			# return render(request, 'information.html', {'User': informations, 'waitConfirm': informations.user_id})
+	# 		else:
+	# 			replyDic['text'] = 'AlreadyFriend'
+	# 			# return render(request, 'information.html', {'User': informations, 'text':"AlreadyFriend"})
+	# 	else:
+	# 		replyDic['addFriend'] = True
+	# 		# return render(request, 'information.html', {'User': informations, 'addFriend':True})
+
+	return render(request, 'information.html', replyDic)
+
+
+def getChatList(request, user=None):
+	if user:
+		users = User.objects.exclude(id=user.id)
 	else:
 		users = User.objects.all()
-	return users
+	lst = []
+	for user in users:
+		dic = {}
+		dic['user_id'] = user.id
+		dic['name'] = user.name
+		dic['photo'] = getUserPhoto(user)
+		lst.append(dic)
+	return lst
+
 
 def getPosts(request, user=None, onwer=None):
 	if user:
-		posts = Post.objects.filter(user_id=user, attach_id=None).order_by('-date')
+		posts = Post.objects.filter(user=user, attach_id=None).order_by('-date')
 	else:
 		posts = Post.objects.all().order_by('-date')
 	lst = []
@@ -51,25 +84,25 @@ def getPosts(request, user=None, onwer=None):
 		data = {
 			'date':post.date.strftime("%Y-%m-%d"),
 			'content': post.content,
-			'id': post.post_id,
-			'name': post.user_id.name,
-			'likes': len(LikePost.objects.filter(post_id=post.post_id)),
-			'hasLike': LikePost.objects.filter(post_id=post.post_id, user_id=onwer.user_id).first(),
-			'userPhoto': Photo.objects.get(user_id=post.user_id, is_sticker=True).photo.url,
+			'id': post.id,
+			'name': post.user.name,
+			'likes': len(LikePost.objects.filter(post=post)),
+			'hasLike': LikePost.objects.filter(post=post, user=onwer).first(),
+			'userPhoto': getUserPhoto(post.user)
 		}
 		attachPost = Post.objects.filter(attach=post)
 		messages = []
 		for p in attachPost:
 			m = {
-				'id': p.post_id,
-				'name': p.user_id.name,
-				'user_id':p.user_id.user_id,
+				'id': p.id,
+				'name': p.user.name,
+				'user_id':p.user_id,
 				'content':p.content,
-				'userPhoto': Photo.objects.get(user_id = p.user_id, is_sticker = True).photo.url,
+				'userPhoto': getUserPhoto(p.user)
 			}
 			messages.append(m)
 		data['messages'] = messages
-		photo = Photo.objects.filter(post_id=post).first()
+		photo = Photo.objects.filter(post=post).first()
 		if photo:
 			data['contentPhoto'] = photo.photo.url
 		lst.append(data)
@@ -95,31 +128,28 @@ def addFriend(request):
 
 @csrf_exempt
 def openChatRoom(request):
-	if not checkLogin(request):
-		return JsonResponse({'status':False, 'data':{}})
-	# try:
-	data = getRequestData(request)
-	reciever = User.objects.get(user_id=data['reciever'])
-	user = getUserByToken(data['token'].replace('\"', ''))
-
-	messages = Message.objects.filter(Q(sender=user, reciever=reciever) | Q(sender=reciever, reciever=user)).order_by("date")
-	lst = []
-	for message in messages:
-		dic = {}
-		dic['user_id'] = message.sender.user_id
-		dic['message_id'] = message.message_id
-		dic['text'] = message.text
-		lst.append(dic)
-	photo = Photo.objects.filter(user_id=reciever.user_id, is_sticker=True).first()
-	data = { 
-		'messages':lst,
-		'reciever':{
-				'id': reciever.user_id,
-				'photo' : photo if photo else Photo.objects.get(photo_id=11).photo.url,
-				'name':reciever.name 
+	if request.method == 'POST':
+		token = request.POST.get('token')
+		user = getUserByToken(token)
+	if user:
+		reciever = User.objects.filter(id=request.POST.get('reciever')).first()
+		messages = Message.objects.filter(Q(sender=user, reciever=reciever) | Q(sender=reciever, reciever=user)).order_by("date")
+		lst = []
+		for message in messages:
+			dic = {}
+			dic['user_id'] = message.sender.id
+			dic['message_id'] = message.id
+			dic['text'] = message.text
+			lst.append(dic)
+		data = { 
+			'messages':lst,
+			'reciever':{
+					'id': reciever.id,
+					'photo' : getUserPhoto(reciever),
+					'name':reciever.name 
+			}
 		}
-	}
-	return JsonResponse({'status':True, 'data':data})
+		return JsonResponse({'status':True, 'data':data})
 	# except Exception as e:
 		# print(e)
 		# return JsonResponse({'status':False, 'data':{}})
@@ -131,43 +161,75 @@ def openChatRoom(request):
 def postOperation(request):
 	global operate
 	if request.method == 'POST':
-		data = getRequestData(request)
-		return operate[data['operate']](request, data)
+		token = request.POST.get('token')
+		user = getUserByToken(token)
+		if user:
+			return operate[request.POST.get('type')](request, user)
 	return JsonResponse({'status':False, 'data':{}})
 
-def likePost(request, data):
-	post = Post.objects.filter(post_id = data['post_id']).first()
+
+def likePost(request, user):
+	post = Post.objects.filter(id = request.POST.get('post_id')).first()
 	if post:
-		user = getUserByToken(request.COOKIES['token'])
-		likePost = LikePost.objects.filter(post_id=post, user_id=user).first()
+		likePost = LikePost.objects.filter(post=post, user=user).first()
 		if likePost:
 			likePost.delete()
+			like = False
 		else:
-			likePost = LikePost(post_id = post, user_id=user)
+			likePost = LikePost(post = post, user=user)
 			likePost.save()
-		
-		return JsonResponse({'status':True, 'data':{'likes': len(LikePost.objects.filter(post_id=post))}})
-	else:
-		return JsonResponse({'status':False, 'data':{}})
+			like = True
+		return JsonResponse({'status':True, 'data':{'likes': len(LikePost.objects.filter(post_id=post)),
+													'like':like,}})
+	return JsonResponse({'status':False, 'data':{}})
+
+
+def uploadPost(request, user):
+	image = request.FILES.get('files')
+	is_valid, response = isvalidImage(image)
+	if not is_valid:
+		return JsonResponse(response)
+	content = request.POST.get('content')
+	attach_id = request.POST.get('attach_id')
+	new_post = Post(content = content, user = user, attach=Post.objects.filter(id = attach_id).first())
+	new_post.save()
+	data = {
+		'content': new_post.content,
+		'date': new_post.date.strftime("%Y-%m-%d"),
+		'post_id': new_post.id,
+		'name':user.name,
+		'userPhoto': getUserPhoto(user),
+	}
+	if image:
+		photo = Photo(user=user, photo=image, post = new_post)
+		photo.save()
+		data['contentPhoto'] = photo.photo.url
+	if attach_id:
+		data['attach_id'] = attach_id	
+	return JsonResponse({'status':True, 'data':data})
+
+
 
 global operate
 operate={
 	'likepost':likePost,
+	'uploadPost': uploadPost,
 }
-
 
 
 @csrf_exempt
 def revise(request):
 	global revise_action
-	if not checkLogin(request):
-		return JsonResponse({'status':False, 'data':{}})
-	data = getRequestData(request)
-	return revise_action[data['type']](request, data)
+	if request.method == 'POST':
+		token = request.POST.get('token')
+		user = getUserByToken(token)
+		if user:
+			return revise_action[data[request.POST.get('type')]](request, user)
+	return JsonResponse({'status':False, 'data':{}})
 
-def createDescription(request, data):
-	user = getUserByToken(request.COOKIES['token'])
-	user.description = data['description'].replace('+', ' ')
+
+def createDescription(request, user):
+	user.description = request.POST.get('description').replace('+', ' ')
 	user.save()
 	return JsonResponse({'status':True, 'data':{}})
 
@@ -178,59 +240,24 @@ revise_action = {
 	'1': createDescription,
 }
 
-def information(request, id):
-	if not checkLogin(request):
-		return JsonResponse({'status':False, 'data':{}})
-	# informations = User.objects.filter(user_id=id).first()
-	user = getUserByToken(request.COOKIES['token'])
-	informations = User.objects.get(user_id=id)
-	replyDic = {}
-	replyDic['User'] = informations
-	replyDic['posts'] = getPosts(request,informations, user)
-	replyDic['chats'] = getUserList(request, user)
-	photo = Photo.objects.filter(user_id = informations, is_sticker=True).first()
-	replyDic['photo'] = photo
 
-	if user and user!=informations:
-		relationship1 = Relationship.objects.filter(user_id1 = user, user_id2 = informations).first()
-		relationship2 = Relationship.objects.filter(user_id1 = informations, user_id2 = user).first()
-		if relationship1:
-			if relationship1.value == 0:
-				replyDic['text'] = 'waiting'
-				# return render(request, 'information.html', {'User': informations, 'text':"waiting"})
-			else:
-				replyDic['text'] = 'AlreadyFriend'
-				# return render(request, 'information.html', {'User': informations, 'text':"AlreadyFriend"})
-		elif relationship2:
-			if relationship2.value == 0:
-				replyDic['waitConfirm'] = informations.user_id
-				# return render(request, 'information.html', {'User': informations, 'waitConfirm': informations.user_id})
-			else:
-				replyDic['text'] = 'AlreadyFriend'
-				# return render(request, 'information.html', {'User': informations, 'text':"AlreadyFriend"})
-		else:
-			replyDic['addFriend'] = True
-			# return render(request, 'information.html', {'User': informations, 'addFriend':True})
 
-	return render(request, 'information.html', replyDic)
 
 def signup(request):
 	global forms
-	if checkLogin(request):
-		return render(request, 'success.html', forms)
 	if request.method == 'POST':
-		form = SignUpForm(request.POST)
-		if not form.is_valid():
-			return render(request, 'login.html', forms)
-		user = User(name = form.cleaned_data['name'], password = make_password(form.cleaned_data['password']), email = form.cleaned_data['email'])
+		name = request.POST.get('Username');
+		password = request.POST.get('Password');
+		email = request.POST.get('Email');
+		user = User(name=name, password=make_password(password), email=email)
 		user.save()
 	return render(request, 'login.html', forms)
 
 
 def login(request):
 	global forms
-	if checkLogin(request):
-		return render(request, 'main.html', {'posts': getPosts(request)})
+	# if checkLogin(request):
+	# 	return render(request, 'main.html', {'posts': getPosts(request)})
 	if request.method == 'POST':
 		form = LoginForm(request.POST)
 		if not form.is_valid():
@@ -239,79 +266,19 @@ def login(request):
 		password = user.password
 		if check_password(form.cleaned_data['password'], password):
 			token = generate_token(user.email)
-			t = Token(user_id=user, token=token)
+			t = Token(user=user, token=token)
 			t.save()
-			response = render(request, 'main.html', locals())
+			response = HttpResponseRedirect("/")
 			response.set_cookie(key='token', value=token)
 			return response
 	return render(request, 'login.html', forms)
 
-@csrf_exempt
-def post(request):
-	if request.method == 'POST':
-		image = request.FILES.get('files')
-		if image:
-			image_types = [
-	                'image/png', 'image/jpg',
-	                'image/jpeg', 'image/pjpeg', 'image/gif'
-	        ]
-			if image.content_type not in image_types:
-				data = {
-					'status': False,
-					'error': 'Bad image format.'
-				}
-				return JsonResponse(data)
 
-		content = request.POST.get('content')
-		token = request.POST.get('token').replace('\"', '')
-		user_id = Token.objects.get(token=token).user_id
-		attach_id = request.POST.get('attach_id')
-		
-		if user_id:
-			if attach_id:
-				new_post = Post(content = content, user_id = user_id, attach=Post.objects.get(post_id = attach_id))
-			else:
-				new_post = Post(content = content, user_id = user_id)
-			new_post.save()
-			data = {
-				'content': new_post.content,
-				'date': new_post.date.strftime("%Y-%m-%d"),
-				'post_id': new_post.post_id,
-				'name':user_id.name,
-				'userPhoto': Photo.objects.get(user_id=user_id, is_sticker=True).photo.url,
-			}
-			if image:
-				photo = Photo(user_id=user_id, photo=image, post_id = new_post)
-				photo.save()
-				data['contentPhoto'] = photo.photo.url
-			if attach_id:
-				data['attach_id'] = attach_id
-			
-			return JsonResponse({'status':True, 'data':data})
 
-	return JsonResponse({'status':False, 'data':{}})
-
-def getRequestData(request):
-	rows = request.body.decode().split('&')
-	print(rows)
-	data = {}
-	for row in rows:
-		row = row.split('=')
-		data[row[0]] = unquote(row[1])
-	return data		
 
 import time
 import base64
 import hmac
-
-def checkLogin(request):
-	global forms
-	try: 
-		token = request.COOKIES['token']
-		tokens = Token.objects.get(token=token)
-		return True
-	except:
-		return False
 
 def generate_token(key, expire=3600):
     ts_str = str(time.time() + expire)
@@ -324,17 +291,34 @@ def generate_token(key, expire=3600):
 
 def getUserByToken(token):
 	try:
-		return Token.objects.get(token=token).user_id
+		return Token.objects.get(token=token.replace('\"', '')).user
 	except:
 		return None
+def getUserPhoto(user):
+	blank_photo_id = 1
+	photo = Photo.objects.filter(user=user, is_sticker=True).first()
+	return photo.photo.url if photo else Photo.objects.get(id=blank_photo_id).photo.url
 
-
+def isvalidImage(image):
+	if not image:
+		return True, {}
+	image_types = [
+                'image/png', 'image/jpg',
+                'image/jpeg', 'image/pjpeg', 'image/gif'
+        ]
+	if image.content_type not in image_types:
+		data = {
+			'status': False,
+			'error': 'Bad image format.'
+		}
+		return False, data
+	else:
+		return True, {}
 
 def SignIn(request):
 	if request.method == 'POST':
-		data = getRequestData(request)
-		email = data['email']
-		password = data['password']
+		email = request.POST.get('email')
+		password = request.POST.get('password')
 		user = User.objects.get(email=email)
 		if not user:
 			return JsonResponse({'status':True, 'data':{
@@ -342,37 +326,33 @@ def SignIn(request):
 				'Message': 'input email is not exist.'
 			}})
 		if check_password(user.password, password):
-			token = generate_token(user.email)
-			t = Token(user_id=user, token=token)
-			t.save()
-			return JsonResponse({'status':True, 'data':{
-				'SignIn': True,
-				'Message': '',
-				'token': t 
-			}})
+			loginByToken(user)
 	return JsonResponse({'status':True, 'data':{
 				'SignIn': False,
 				'Message': 'password is not correct',
 			}})	
 def SignUpApi(request):
 	if request.method == 'POST':
-		data = getRequestData(request)
-		if User.objectl.get(email=data['email']):
+		email = request.POST.get('email')
+		if User.objectl.get(email=email):
 			return JsonResponse({'status':True, 'data':{
 				'SignIn': False,
 				'Message': 'input email is not exist.'
 			}})
-		user = User(name=data['name'],password=make_password(data[password]),email=data['email'])
+		user = User(name=request.POST.get('name'),password=make_password(request.POST.get('password')),email=email)
 		user.save()
-		return JsonResponse({'status':True, 'data':{
-				'SignIn': True,
-				'Message': '',
-				'token': user 
-		}})
-
+		return loginByToken(user)
 	return render(request, 'login.html', forms)
 
-
+def loginByToken(user):
+	token = generate_token(user.email)
+	t = Token(user=user, token=token)
+	t.save()
+	return JsonResponse({'status':True, 'data':{
+			'SignIn': True,
+			'Message': '',
+			'token': t 
+	}})
 # class RequestOperate():
 # 	def __init__(self, request):
 # 		self.request = request

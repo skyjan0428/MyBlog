@@ -12,8 +12,8 @@ class Consumer(AsyncWebsocketConsumer):
         )
         try:
             token = Token.objects.get(token=self.scope['cookies']['token'])
-            self.room_name = token.user_id.user_id
-            client = Client(channel_name = self.channel_name, user_id = token.user_id)
+            self.room_name = token.user_id
+            client = Client(channel_name = self.channel_name, user = token.user)
             client.save()
         except Exception as e:
             print(str(e))
@@ -34,16 +34,30 @@ class Consumer(AsyncWebsocketConsumer):
         text_data_json = json.loads(text_data)
         user_id = text_data_json['user_id']
         message = text_data_json['message']
-        user = User.objects.get(user_id=self.room_name)
-        receivers = Client.objects.filter(user_id = user_id)
+        user = User.objects.get(id=self.room_name)
+        senders = Client.objects.filter(user=user.id)
+        receivers = Client.objects.filter(user=user_id)
+        if not receivers.first():
+            return
+        message = Message(sender=user, reciever=receivers.first().user, text=message)
+        message.save()
         for receiver in receivers:
             await self.channel_layer.send(receiver.channel_name, {
                 "type": "chat_message",
-                "message": message,
-                "sender": user.name
+                "message": message.text,
+                "sender": user.id,
+                "receiver": receiver.user_id,
+                "self":False
             })
-        message = Message(sender=user, reciever=receivers.first().user_id, text=message)
-        message.save()
+        for sender in senders:
+            await self.channel_layer.send(sender.channel_name, {
+                "type": "chat_message",
+                "message": message.text,
+                "sender": user.id,
+                "receiver": receiver.user_id,
+                "self" : True
+            })
+        
         
 
         # Send message to room group
@@ -64,7 +78,9 @@ class Consumer(AsyncWebsocketConsumer):
         # })
         await self.send(text_data=json.dumps({
             'message': message,
-            'sender':event['sender']
+            'sender':event['sender'],
+            "self" : event['self'],
+            "receiver" : event['receiver']
         }))
 
 

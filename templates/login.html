@@ -27,10 +27,9 @@
 
 		<form action = '/signup/' method='post'>
 			{%csrf_token%}
-					<!-- <li><input name = 'Username' type="text" placeholder="Username" required/></li>
+					<li><input name = 'Username' type="text" placeholder="Username" required/></li>
 					<li><input name = 'Password' type="password" placeholder="Password" required/></li>
-					<li><input name = 'Email' ype="text" placeholder="Email" required/></li> -->
-					{{form.as_p}}
+					<li><input name = 'Email' type="text" placeholder="Email" required/></li>
 					<input type="submit" value="Signup" >
 					<div class="clear"> </div>
 

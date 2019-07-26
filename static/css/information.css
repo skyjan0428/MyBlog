@@ -299,13 +299,13 @@ a:hover {
 	bottom: 0;*/
 }
 .chatRoomTitle{
-	width:100%;
+	width:100% - 13px;
 	color:black;
 	border-style: none;
 	display: flex;
 	align-items: center;
-    justify-content: flex-start;
-    padding: 3px 5px 1px 5px;
+    justify-content: space-between;
+    padding: 3px 8px 1px 5px;
 }
 .chatRoomContent{
 	width:100%;
@@ -316,11 +316,18 @@ a:hover {
 	align-items: flex-start;*/
 	/*align-items: flex-start;*/
 }
-#inputChat{
+.inputChat{
 	width: 95%;
 	height: 30px;
 	border-style:none;
 	border-radius: 10px;
+}
+
+.closeChatRoom{
+	color:blue;
+	margin-left: 50%;
+	display: flex;
+	justify-content: flex-end;
 }
 
 

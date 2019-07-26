@@ -16,7 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.conf.urls import url
-from blog.views import index, signup, login, post, information, postOperation, openChatRoom, addFriend, revise, add
+from blog.views import index, signup, login, information, postOperation, openChatRoom, addFriend, revise, photopage
 from django.conf.urls.static import static
 from django.conf import settings
 
@@ -26,16 +26,15 @@ from django.shortcuts import render
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('photo/', photopage, name="photo"),
     path(r'', index, name = 'index'),
     path('signup/', signup, name = 'signup'),
     path('login/', login, name = 'login'),
-    path('sendPost/', post, name = 'post'),
     path('information/<int:id>/', information, name = 'information'),
     path('information/addFriend/', addFriend, name = 'addFriend'),
     path('information/revise/', revise, name = 'revise'),
     path('postoperation/', postOperation, name = 'postoperation'),
     path('openChatRoom/', openChatRoom, name = 'openChatRoom'),
-    path('add/', add, name = 'add'),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
