@@ -16,6 +16,7 @@ global forms
 forms = {'form':SignUpForm, 'signin': LoginForm,}
 
 def photopage(request):
+	return JsonResponse({'id':1, 'name': 'abc', 'description':'des'})
 	return render(request, 'photo.html', locals())
 
 def index(request):
@@ -28,12 +29,12 @@ def index(request):
 def information(request, id=None):
 	token = request.COOKIES['token']
 	user = getUserByToken(token)
-	informations = User.objects.get(id=id)
+	informations = User.userChat.get(id=id)
 	replyDic = {}
 	replyDic['User'] = informations
-	replyDic['posts'] = getPosts(request,informations, user)
-	replyDic['chats'] = getChatList(request, user)
-	replyDic['photo'] = getUserPhoto(informations)
+	replyDic['posts'] = Post.mainPost.get(user=informations)
+	replyDic['chats'] = User.userChat.getChatList(user=user)
+	replyDic['photo'] = Photo.blogPhoto.getUserPhoto(informations)
 
 	# if user and user!=informations:
 	# 	relationship1 = Relationship.objects.filter(user_id1 = user, user_id2 = informations).first()
@@ -58,55 +59,6 @@ def information(request, id=None):
 
 	return render(request, 'information.html', replyDic)
 
-
-def getChatList(request, user=None):
-	if user:
-		users = User.objects.exclude(id=user.id)
-	else:
-		users = User.objects.all()
-	lst = []
-	for user in users:
-		dic = {}
-		dic['user_id'] = user.id
-		dic['name'] = user.name
-		dic['photo'] = getUserPhoto(user)
-		lst.append(dic)
-	return lst
-
-
-def getPosts(request, user=None, onwer=None):
-	if user:
-		posts = Post.objects.filter(user=user, attach_id=None).order_by('-date')
-	else:
-		posts = Post.objects.all().order_by('-date')
-	lst = []
-	for post in posts:
-		data = {
-			'date':post.date.strftime("%Y-%m-%d"),
-			'content': post.content,
-			'id': post.id,
-			'name': post.user.name,
-			'likes': len(LikePost.objects.filter(post=post)),
-			'hasLike': LikePost.objects.filter(post=post, user=onwer).first(),
-			'userPhoto': getUserPhoto(post.user)
-		}
-		attachPost = Post.objects.filter(attach=post)
-		messages = []
-		for p in attachPost:
-			m = {
-				'id': p.id,
-				'name': p.user.name,
-				'user_id':p.user_id,
-				'content':p.content,
-				'userPhoto': getUserPhoto(p.user)
-			}
-			messages.append(m)
-		data['messages'] = messages
-		photo = Photo.objects.filter(post=post).first()
-		if photo:
-			data['contentPhoto'] = photo.photo.url
-		lst.append(data)
-	return lst
 
 @csrf_exempt
 def addFriend(request):
@@ -133,19 +85,12 @@ def openChatRoom(request):
 		user = getUserByToken(token)
 	if user:
 		reciever = User.objects.filter(id=request.POST.get('reciever')).first()
-		messages = Message.objects.filter(Q(sender=user, reciever=reciever) | Q(sender=reciever, reciever=user)).order_by("date")
-		lst = []
-		for message in messages:
-			dic = {}
-			dic['user_id'] = message.sender.id
-			dic['message_id'] = message.id
-			dic['text'] = message.text
-			lst.append(dic)
+		messages = Message.messages.getMessages(sender=user, reciever=reciever)
 		data = { 
-			'messages':lst,
+			'messages':messages,
 			'reciever':{
 					'id': reciever.id,
-					'photo' : getUserPhoto(reciever),
+					'photo' : Photo.blogPhoto.getUserPhoto(reciever),
 					'name':reciever.name 
 			}
 		}
@@ -171,16 +116,9 @@ def postOperation(request):
 def likePost(request, user):
 	post = Post.objects.filter(id = request.POST.get('post_id')).first()
 	if post:
-		likePost = LikePost.objects.filter(post=post, user=user).first()
-		if likePost:
-			likePost.delete()
-			like = False
-		else:
-			likePost = LikePost(post = post, user=user)
-			likePost.save()
-			like = True
-		return JsonResponse({'status':True, 'data':{'likes': len(LikePost.objects.filter(post_id=post)),
-													'like':like,}})
+		postLikes, is_like = LikePost.postLikes.likePress(post=post, user=user)
+		return JsonResponse({'status':True, 'data':{'likes': postLikes,
+													'like':is_like,}})
 	return JsonResponse({'status':False, 'data':{}})
 
 
@@ -190,22 +128,8 @@ def uploadPost(request, user):
 	if not is_valid:
 		return JsonResponse(response)
 	content = request.POST.get('content')
-	attach_id = request.POST.get('attach_id')
-	new_post = Post(content = content, user = user, attach=Post.objects.filter(id = attach_id).first())
-	new_post.save()
-	data = {
-		'content': new_post.content,
-		'date': new_post.date.strftime("%Y-%m-%d"),
-		'post_id': new_post.id,
-		'name':user.name,
-		'userPhoto': getUserPhoto(user),
-	}
-	if image:
-		photo = Photo(user=user, photo=image, post = new_post)
-		photo.save()
-		data['contentPhoto'] = photo.photo.url
-	if attach_id:
-		data['attach_id'] = attach_id	
+	attach = request.POST.get('attach_id')
+	data = Post.mainPost.uploadPost(user=user, content=content, attach=attach, image=image)
 	return JsonResponse({'status':True, 'data':data})
 
 
@@ -294,10 +218,7 @@ def getUserByToken(token):
 		return Token.objects.get(token=token.replace('\"', '')).user
 	except:
 		return None
-def getUserPhoto(user):
-	blank_photo_id = 1
-	photo = Photo.objects.filter(user=user, is_sticker=True).first()
-	return photo.photo.url if photo else Photo.objects.get(id=blank_photo_id).photo.url
+
 
 def isvalidImage(image):
 	if not image:
