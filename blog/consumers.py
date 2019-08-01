@@ -1,7 +1,7 @@
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import AsyncWebsocketConsumer
 import json
-from .models import Client, User, Token, Message
+from .models import Client, User, Token, Message, Notification
 class Consumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_group_name = 'testroom'
@@ -32,32 +32,40 @@ class Consumer(AsyncWebsocketConsumer):
     # Receive message from WebSocket
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        user_id = text_data_json['user_id']
+        receiver_id = text_data_json['user_id']
+        receiver = User.objects.get(id=receiver_id)
+
         message = text_data_json['message']
-        user = User.objects.get(id=self.room_name)
-        senders = Client.objects.filter(user=user.id)
-        receivers = Client.objects.filter(user=user_id)
-        if not receivers.first():
-            return
-        message = Message(sender=user, reciever=receivers.first().user, text=message)
+        sender = User.objects.get(id=self.room_name)
+        senders = Client.objects.filter(user=sender)
+        receivers = Client.objects.filter(user=receiver)
+        # if not receivers.first():
+        #     return
+        message = Message(sender=sender, reciever=receiver, text=message)
         message.save()
-        for receiver in receivers:
-            await self.channel_layer.send(receiver.channel_name, {
-                "type": "chat_message",
-                "message": message.text,
-                "sender": user.id,
-                "receiver": receiver.user_id,
-                "self":False
-            })
+        if receivers:
+            for receiver in receivers:
+                await self.channel_layer.send(receiver.channel_name, {
+                    "type": "chat_message",
+                    "message": message.text,
+                    "sender": sender.id,
+                    "receiver": receiver_id,
+                    "self":False
+                })
+        else:
+            notification = Notification(category='postMessage', user=receiver, message=message)
+            notification.save()
+
         for sender in senders:
             await self.channel_layer.send(sender.channel_name, {
                 "type": "chat_message",
                 "message": message.text,
-                "sender": user.id,
-                "receiver": receiver.user_id,
+                "sender":  sender.id,
+                "receiver": receiver_id,
                 "self" : True
             })
         
+
         
 
         # Send message to room group
@@ -68,16 +76,26 @@ class Consumer(AsyncWebsocketConsumer):
         #         'message': message
         #     }
         # )
+    async def postMessage(self, event):
+        await self.send(text_data=json.dumps({
+            'type':'postMessage',
+            'content': event['content'],
+            'user':event['user'],
+            "post" : event['post'],
+        }))
+
+    async def postLike(self, event):
+        await self.send(text_data=json.dumps({
+            'type':'postLike',
+            'content': event['content'],
+            'user':event['user'],
+            "post" : event['post'],
+        }))
 
     async def chat_message(self, event):
-        message = event['message']
-        print(message)
-        # Send message to WebSocket
-        # await self.channel_layer.send(self.channel_name, {
-        #     "message": "message",
-        # })
         await self.send(text_data=json.dumps({
-            'message': message,
+            'type':'chat',
+            'message': event['message'],
             'sender':event['sender'],
             "self" : event['self'],
             "receiver" : event['receiver']

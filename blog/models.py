@@ -1,6 +1,9 @@
 from django.db import models
 import datetime
 from django.db.models import Q
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+channel_layer = get_channel_layer()
 # from blog.managers import MainPostManager, BlogPhotoManager, PostLiksManager
 
 # Create your models here.
@@ -18,7 +21,8 @@ class MainPostManager(models.Manager):
 				'name': post.user.name,
 				'likes': LikePost.postLikes.getPostLikesCount(post),
 				'hasLike': LikePost.postLikes.is_like(post, user),
-				'userPhoto': Photo.blogPhoto.getUserPhoto(post.user)
+				'userPhoto': Photo.blogPhoto.getUserPhoto(post.user),
+				'contentPhotos': Photo.blogPhoto.getContentPhoto(post),
 			}
 			attachPost = self.getAttachs(post)
 			messages = []
@@ -34,7 +38,6 @@ class MainPostManager(models.Manager):
 			'user_id':post.user_id,
 			'content':post.content,
 			'userPhoto': Photo.blogPhoto.getUserPhoto(post.user),
-			'contentPhoto': Photo.blogPhoto.getContentPhoto(post)
 		}
 		return p
 	def getAttachs(self, post):
@@ -51,7 +54,7 @@ class MainPostManager(models.Manager):
 			'userPhoto': Photo.blogPhoto.getUserPhoto(user),
 			'attach_id': attach
 		}
-		Photo.blogPhoto.uploadPostPhoto(image, data)
+		Photo.blogPhoto.uploadPostPhoto(image, data, new_post)
 		return data
 
 
@@ -62,13 +65,28 @@ class BlogPhotoManager(models.Manager):
 		return photo.photo.url if photo else self.get_queryset().get(id=blank_photo_id).photo.url
 	def getContentPhoto(self, post):
 		return self.get_queryset().filter(post=post)
-	def uploadPostPhoto(self, image, data):
+	def uploadPostPhoto(self, image, data, post):
 		if image:
-			photo = Photo(user=user, photo=image, post = new_post)
+			photo = Photo(user=post.user, photo=image, post = post)
 			photo.save()
 			data['contentPhoto'] = photo.photo.url
+	def getUserPhotoAll(self, user):
+		return self.get_queryset().filter(user=user).order_by("-date")
 
-	
+
+class ClientNotifyManager(models.Manager):
+	def sendPostLikeNotify(self, user, post):
+		notification = Notification(category='postLike', user=post.user, post=post)
+		notification.save()
+		clients = Client.objects.filter(user=notification.user)
+		for client in clients:
+			async_to_sync(channel_layer.send)(client.channel_name, {"type": notification.category, "post": post.id, "user":post.user.id, "content": user.name + " likes your post."})
+	def sendPostMessageNotify(self, user, post):
+		notification = Notification(category='postMessage', user=post.user, post=post)
+		notification.save()
+		clients = Client.objects.filter(user=post.user)
+		for client in clients:
+			async_to_sync(channel_layer.send)(client.channel_name, {"type": notification.category, "post": post.id, "user":post.user.id, "content": user.name + " leave message on your post."})
 
 
 
@@ -77,11 +95,11 @@ class PostLikesManager(models.Manager):
 	def getPostLikesCount(self, post):
 		return self.get_queryset().filter(post=post).count()
 	def is_like(self, post, user):
-		return self.get_queryset().filter(post=post, user=user).exists(),
+		return self.get_queryset().filter(post=post, user=user).first() != None
 	def likePress(self, post, user):
 		is_like = self.is_like(post=post, user=user)
 		if is_like:
-			LikePost.objects.get(post=post, user=user).delete()
+			self.get_queryset().get(post=post, user=user).delete()
 		else:
 			likePost = LikePost(post=post, user=user)
 			likePost.save()
@@ -105,15 +123,19 @@ class MessageManager(models.Manager):
 		messages = self.get_queryset().filter(Q(sender=sender, reciever=reciever) | Q(sender=reciever, reciever=sender)).order_by("date")
 		lst = []
 		for message in messages:
+			print(message.text)
 			dic = {
 			  'user_id' : message.sender.id,
 			  'message_id': message.id,
 			  'text' : message.text
 			}
-		lst.append(dic)
+			lst.append(dic)
 		return lst
 		
 
+class NotificationManager(models.Manager):
+	def getAllNotifications(self, user):
+			return self.get_queryset().filter(user=user).order_by("-date")
 
 
 
@@ -128,7 +150,7 @@ class User(models.Model):
 	name = models.CharField(max_length=10)
 	email = models.CharField(max_length=30)
 	password = models.CharField(max_length=100)
-	description = models.TextField(null=True)
+	description = models.TextField(default='新增個人簡介，讓大家更瞭解你。')
 
 	objects = models.Manager()
 	userChat = UserChatManager()
@@ -146,6 +168,7 @@ class Post(models.Model):
 	user = models.ForeignKey(User,related_name='post_user_id', on_delete=models.PROTECT,  default='')
 	attach = models.ForeignKey('self',related_name='attach_to_post', on_delete=models.PROTECT, null = True)
 
+	objects = models.Manager()
 	mainPost = MainPostManager()
 
 
@@ -156,6 +179,7 @@ class Message(models.Model):
 	date = models.DateTimeField('Datetime', auto_now=True)
 	text = models.TextField(null=True)
 
+	objects = models.Manager()
 	messages = MessageManager()
 
 
@@ -163,6 +187,7 @@ class LikePost(models.Model):
 	post = models.ForeignKey(Post,related_name='like_post_id', on_delete=models.PROTECT , default='')
 	user = models.ForeignKey(User,related_name='like_user_id', on_delete=models.PROTECT, default='')
 
+	objects = models.Manager()
 	postLikes = PostLikesManager()
 
 class Client(models.Model):
@@ -170,13 +195,17 @@ class Client(models.Model):
 	channel_name = models.CharField(max_length=100)
 	user = models.ForeignKey(User,related_name='client_user_id', on_delete=models.PROTECT, default='')
 
-class Photo(models.Model):
+	objects = models.Manager()
+	clientNotify = ClientNotifyManager()
+
+class Photo(models.Model): 
 	photo = models.ImageField(upload_to='photo/')
-	user = models.ForeignKey(User,related_name='photo_user_id', on_delete=models.PROTECT, default='', null = True)
+	user = models.ForeignKey(User,related_name='photo_user_id', on_delete=models.PROTECT, default='', null=True)
 	is_sticker = models.BooleanField(default=False)
 	date = models.DateTimeField('Datetime', auto_now=True)
-	post = models.ForeignKey(Post,related_name='photo_post_id', on_delete=models.PROTECT, default='', null = True)
+	post = models.ForeignKey(Post,related_name='photo_post_id', on_delete=models.PROTECT, default='', null=True)
 
+	objects = models.Manager()
 	blogPhoto = BlogPhotoManager()
 
 class Token(models.Model):
@@ -185,9 +214,15 @@ class Token(models.Model):
 	user = models.ForeignKey(User,related_name='token_user', on_delete=models.PROTECT, default='')
 
 
+class Notification(models.Model):
+	date = models.DateTimeField('Datetime', auto_now=True)
+	category = models.CharField(max_length=50)
+	user = models.ForeignKey(User,related_name='user_notify', on_delete=models.PROTECT, default='')
+	message = models.ForeignKey(Message,related_name='message_notify', on_delete=models.PROTECT, null=True, default='')
+	post = models.ForeignKey(Post,related_name='post_notify', on_delete=models.PROTECT, null=True, default='')
 
-
-
+	objects = models.Manager()
+	notification = NotificationManager()
 
 
 

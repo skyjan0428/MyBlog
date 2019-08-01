@@ -262,6 +262,7 @@ function openChat(id){
   function success(data) {
     console.log(data);
       if (data.status) { 
+        console.log(data);
         var chatRoom = document.createElement("DIV");
         chatRoom.id = 'chatRoom'+data.data.reciever.id;
         chatRoom.className = 'chatRoom';
@@ -351,6 +352,22 @@ var chatSocket = new WebSocket(
 chatSocket.onmessage = function(e) {
   var data = JSON.parse(e.data);
   console.log(e.data);
+  if(data['type'] == 'postLike'){
+    console.log(data['content']);
+  }else if(data['type'] == 'postMessage'){
+    console.log(data['content']);
+  }else{
+    recieveChat(data);
+  }
+  
+  
+};
+
+chatSocket.onclose = function(e) {
+  console.error('Chat socket closed unexpectedly');
+};
+
+function recieveChat(data){
   var message = data['message'];
   var sender = data['sender'];
   var receiver = data['receiver'];
@@ -383,12 +400,8 @@ chatSocket.onmessage = function(e) {
   
   chatRoom.append(d);
   chatRoom.scrollTop = chatRoom.scrollHeight;
-  
-};
+}
 
-chatSocket.onclose = function(e) {
-  console.error('Chat socket closed unexpectedly');
-};
 
 
 // document.querySelector('#chat-message-input').focus();

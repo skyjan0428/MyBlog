@@ -1,23 +1,36 @@
 from django.shortcuts import render
-from blog.models import User, Post, Token, LikePost, Message, Relationship, Photo
+from blog.models import User, Post, Token, LikePost, Message, Relationship, Photo, Client, Notification
 from .forms import SignUpForm, LoginForm
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
 from urllib.parse import unquote
 import json
 from django.http import JsonResponse, HttpResponseRedirect
-from django.db.models import Q
-import datetime
-# Create your views here.
 
+import datetime
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+channel_layer = get_channel_layer()
 
 global forms
 
 forms = {'form':SignUpForm, 'signin': LoginForm,}
 
 def photopage(request):
-	return JsonResponse({'id':1, 'name': 'abc', 'description':'des'})
-	return render(request, 'photo.html', locals())
+	# return JsonResponse({'id':1, 'name': 'abc', 'description':'des'})
+	token = request.COOKIES['token']
+	user = getUserByToken(token)
+	if request.method == 'POST':
+		myImages = request.FILES.getlist('myImages')
+		for image in myImages:
+			print(image)
+			photo = Photo(user=user, photo=image)
+			photo.save()
+
+	replyDic = {}
+	replyDic['chats'] = User.userChat.getChatList(user=user)
+	replyDic['photos'] = Photo.blogPhoto.getUserPhotoAll(user)
+	return render(request, 'photo.html', replyDic)
 
 def index(request):
 	token = request.COOKIES['token']
@@ -31,10 +44,14 @@ def information(request, id=None):
 	user = getUserByToken(token)
 	informations = User.userChat.get(id=id)
 	replyDic = {}
+	photos = Photo.blogPhoto.getUserPhotoAll(informations)
 	replyDic['User'] = informations
 	replyDic['posts'] = Post.mainPost.get(user=informations)
 	replyDic['chats'] = User.userChat.getChatList(user=user)
 	replyDic['photo'] = Photo.blogPhoto.getUserPhoto(informations)
+	replyDic['photos'] = photos[0:6 if len(photos) > 6 else len(photos)]
+	replyDic['notifications'] = Notification.notification.getAllNotifications(user=user)
+	print(replyDic['notifications'].first().category);
 
 	# if user and user!=informations:
 	# 	relationship1 = Relationship.objects.filter(user_id1 = user, user_id2 = informations).first()
@@ -83,18 +100,18 @@ def openChatRoom(request):
 	if request.method == 'POST':
 		token = request.POST.get('token')
 		user = getUserByToken(token)
-	if user:
-		reciever = User.objects.filter(id=request.POST.get('reciever')).first()
-		messages = Message.messages.getMessages(sender=user, reciever=reciever)
-		data = { 
-			'messages':messages,
-			'reciever':{
-					'id': reciever.id,
-					'photo' : Photo.blogPhoto.getUserPhoto(reciever),
-					'name':reciever.name 
+		if user:
+			reciever = User.objects.filter(id=request.POST.get('reciever')).first()
+			messages = Message.messages.getMessages(sender=user, reciever=reciever)
+			data = { 
+				'messages':messages,
+				'reciever':{
+						'id': reciever.id,
+						'photo' : Photo.blogPhoto.getUserPhoto(reciever),
+						'name':reciever.name 
+				}
 			}
-		}
-		return JsonResponse({'status':True, 'data':data})
+			return JsonResponse({'status':True, 'data':data})
 	# except Exception as e:
 		# print(e)
 		# return JsonResponse({'status':False, 'data':{}})
@@ -117,6 +134,9 @@ def likePost(request, user):
 	post = Post.objects.filter(id = request.POST.get('post_id')).first()
 	if post:
 		postLikes, is_like = LikePost.postLikes.likePress(post=post, user=user)
+		if is_like:
+			Client.clientNotify.sendPostLikeNotify(user, post)
+
 		return JsonResponse({'status':True, 'data':{'likes': postLikes,
 													'like':is_like,}})
 	return JsonResponse({'status':False, 'data':{}})
@@ -130,6 +150,9 @@ def uploadPost(request, user):
 	content = request.POST.get('content')
 	attach = request.POST.get('attach_id')
 	data = Post.mainPost.uploadPost(user=user, content=content, attach=attach, image=image)
+	if attach:
+		post = Post.objects.filter(id = attach).first()
+		Client.clientNotify.sendPostMessageNotify(user, post)
 	return JsonResponse({'status':True, 'data':data})
 
 
@@ -148,7 +171,7 @@ def revise(request):
 		token = request.POST.get('token')
 		user = getUserByToken(token)
 		if user:
-			return revise_action[data[request.POST.get('type')]](request, user)
+			return revise_action[request.POST.get('type')](request, user)
 	return JsonResponse({'status':False, 'data':{}})
 
 
