@@ -69,7 +69,7 @@ class BlogPhotoManager(models.Manager):
 	def getUserPhoto(self, user):
 		blank_photo_id = 1
 		photo = self.get_queryset().filter(user=user, is_sticker=True).first()
-		return photo.photo.url if photo else self.get_queryset().get(id=blank_photo_id).photo.url
+		return photo.photo.url if photo else '/static/images/blank.jpg' #self.get_queryset().get(id=blank_photo_id).photo.url
 	def getContentPhoto(self, post):
 		return self.get_queryset().filter(post=post)
 	def uploadPostPhoto(self, image, data, post):

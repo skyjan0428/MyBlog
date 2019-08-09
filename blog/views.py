@@ -54,6 +54,7 @@ def index(request):
 		
 
 def information(request, id=None):
+	print('hi')
 	token = request.COOKIES['token']
 	user = getUserByToken(token)
 	informations = User.objects.get(id=id)
@@ -236,25 +237,30 @@ def signup(request):
 
 def login(request):
 	global forms
+
 	try:
 		token = request.COOKIES['token']
-		user = getUserByToken(token)
+		user = getUserByToken(token)	
 		if user:
 			return information(request, id=user.id)
 	except:
-		if request.method == 'POST':
-			form = LoginForm(request.POST)
-			if not form.is_valid():
-				return render(request, 'login.html', forms)
-			user = User.objects.get(email=form.cleaned_data['email'])
-			password = user.password
-			if check_password(form.cleaned_data['password'], password):
-				token = generate_token(user.email)
-				t = Token(user=user, token=token)
-				t.save()
-				response = HttpResponseRedirect("/")
-				response.set_cookie(key='token', value=token)
-				return response
+		pass
+	if request.method == 'POST':
+		form = LoginForm(request.POST)
+		if not form.is_valid():
+
+			return render(request, 'login.html', forms)
+		user = User.objects.get(email=form.cleaned_data['email'])
+		password = user.password
+
+		if check_password(form.cleaned_data['password'], password):
+
+			token = generate_token(user.email)
+			t = Token(user=user, token=token)
+			t.save()
+			response = HttpResponseRedirect("/")
+			response.set_cookie(key='token', value=token)
+			return response
 	return render(request, 'login.html', forms)
 
 

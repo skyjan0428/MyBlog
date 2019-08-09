@@ -8,4 +8,5 @@ admin.site.register(User)
 admin.site.register(Message)
 admin.site.register(LikePost)
 admin.site.register(Notification)
+admin.site.register(Photo)
 
