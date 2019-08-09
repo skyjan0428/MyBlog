@@ -11,6 +11,28 @@
     /*justify-content: center;*/
 }
 
+#notifyBlock{
+	width:400px;
+	height:300px;
+	position:fixed;
+	top:30px;
+	right:120px;
+	z-index:9999;
+	background-color:white;
+	overflow:scroll;
+	border-style: solid;
+	border-color:#D8DEE2;
+	border-radius:5px;
+	border-width: thin;
+	display:none;
+
+}
+.notifyMessage{
+	padding:10px;
+	display:flex;
+
+}
+
 body{
 	margin:0px;
 	background-color: #F7F8FA;
@@ -137,7 +159,7 @@ body{
 	background-color: white;
 	border-radius:5px;
 	border-width: thin;
-	padding: 30px 10px 15px 10px;
+	padding: 10px 10px 15px 10px;
 	margin-top: 20px;
 
 }
@@ -236,6 +258,7 @@ a:hover {
 	right:0;
 	top:45px;
 	background-color: #F7F8FA;
+	z-index:5000;
 	/*display: inline-block;*/
 }
 .chatButton{
@@ -414,6 +437,13 @@ a:hover {
 	color:white;
 	border-style: none;
 }
+#setPhoto{
+	margin-bottom:15px;
+	width:100px;
+	background-color: #2E97D1;
+	color:white;
+	border-style: none;
+}
 #photoBody{
 	display: flex;
 	padding: 5px;
@@ -467,10 +497,31 @@ a:hover {
 	padding: 10px 10px 10px 10px;
 	margin-top: 20px;
 	margin-right: 50px;
-	display: flex;
-	justify-content: flex-start;
-	flex-wrap:wrap;
+	
 }
+#userIcon{
+	width:40px;
+	height:30px;
+	position:fixed;
+	top:30px;
+	right:10px;
+	z-index:9999;
+	background-color:white;
+	overflow:scroll;
+	border-style: solid;
+	border-color:#D8DEE2;
+	border-radius:5px;
+	border-width: thin;
+	/*display:none;*/
+}
+
+.delete{
+	width: 20px;
+    height: 20px;
+    margin-left:15px;
+
+}
+
 /*#file { 
 border-style: none; 
 border-color: Gray; 

@@ -53,7 +53,7 @@ class Consumer(AsyncWebsocketConsumer):
                     "self":False
                 })
         else:
-            notification = Notification(category='postMessage', user=receiver, message=message)
+            notification = Notification(category='chat', user=receiver, message=message)
             notification.save()
 
         for sender in senders:

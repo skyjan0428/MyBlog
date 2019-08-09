@@ -19,23 +19,25 @@ function sendPost(){
   fd.append('files',files);
   fd.append('type', 'uploadPost')
   fd.append('token', getCookie('token'))
+  fd.append('owner', owner)
   fd.append('content', content)
   function success(data){
     console.log(data);
     if (data.status) { 
         var dv = document.createElement("DIV");
         dv.className='postForm';
+        dv.id = "post" + data.data.post_id;
         var photo = ""
         if(data.data.contentPhoto)
           photo = "<img class='postContentImg' src='"+data.data.contentPhoto+"'><br>"
         
         // dv.innerHTML = "<div id='title'> <img class='postFace' src='"+data.data.userPhoto+"' > <span id='name'>"+data.data.name+"</span><span id='date'>"+data.data.date+"</span>"+"</div><p>"+data.data.content+"</p>" + photo + "<a onclick='like("+data.data.post_id+")'>讚</a>";
         
-
         dv.innerHTML = '<div class="title">' +
                               '<img class="postFace" src="'+data.data.userPhoto+'" alt="Avatar">' +
                               '<span class="name">'+data.data.name+'</span>'+
                               '<span class="date">'+data.data.date+'</span>'+
+                              '<img id="delete" src ="'+url+'"class="delete" onclick="deletePost('+data.data.post_id+')">'+
                           '</div>'+
                           '<p align="left"> '+data.data.content+'</p>'+
                           photo +
@@ -44,7 +46,6 @@ function sendPost(){
                           '<div class = "leaveMessageButton">'+
                               '<button id = "like_button'+data.data.post_id+'" onclick="like('+data.data.post_id+')">讚</button>'+
                               '<button onclick=""> 留言</button>' +
-                              '<button onclick=""> 分享</button>' +
                           '</div>' +
                           '<div style="width:100%; height:2px; background: #F7F8FA; margin-top: 8px;margin-bottom: 8px;"></div>' +
                           '<div id="message'+data.data.post_id+'">'+
@@ -54,8 +55,10 @@ function sendPost(){
                           '</div>';
 
 
+
         var posts = document.getElementById('posts')
         posts.insertBefore(dv, posts.firstChild);
+        // document.getElementById("delete").src = url;
 
     }
   }
@@ -187,6 +190,7 @@ function leaveMessage(id){
   fd.append('content', content);
   fd.append('type', 'uploadPost');
   fd.append('attach_id', id);
+  fd.append('owner', owner);
   function success(data){
     if (data.status) { 
         var outside = document.createElement("DIV");
@@ -402,7 +406,68 @@ function recieveChat(data){
   chatRoom.scrollTop = chatRoom.scrollHeight;
 }
 
+function loadPage(id){
+  window.location.href = "../../post/" + id
+}
 
+function readNotification(){
+  block = document.getElementById("notifyBlock")
+  console.log(block.style.display);
+  if(block.style.display=="none" || block.style.display==""){
+    block.style.display="block";
+    readNotifications();
+  }else{
+    block.style.display="none";
+  }
+}
+
+function readNotifications(){
+  function success(data) {
+      notifyLength = document.getElementById("notifyLength");
+      notifyLength.innerHTML = data.data.notifications;
+   }
+  function error(jqXHR) {
+      console.log(jqXHR)
+  }
+  data= { 
+      token: getCookie('token'),
+  }
+  sendAjax(data,"/readNotifications/","POST", "json", success, error)
+}
+
+function logout(){
+  function success(data) {
+      if(data.status){
+        window.location.href = "/login/"
+      }
+   }
+  function error(jqXHR) {
+      console.log(jqXHR)
+  }
+  data= { 
+      token: getCookie('token'),
+  }
+  sendAjax(data,"/logout/","POST", "json", success, error)
+}
+
+function deletePost(id){
+  function success(data) {
+      if(data.status){
+        var post = document.getElementById("post" + id);
+        post.parentNode.removeChild(post);
+      }
+   }
+  function error(jqXHR) {
+      console.log(jqXHR)
+  }
+  data= { 
+      token: getCookie('token'),
+      post_id: id,
+      type: 'delete',
+      owner: owner,
+  }
+  sendAjax(data,"/postoperation/","POST", "json", success, error)
+}
 
 // document.querySelector('#chat-message-input').focus();
 

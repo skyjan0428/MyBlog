@@ -9,8 +9,10 @@
 		<form align="right" style="width: 85%; align-self: flex-end;" enctype="multipart/form-data" action="/photo/" method="post">
 			{%csrf_token%}
 			<input  style="width: 180px; " align="right" id = "file" type="file" name="myImages" multiple>
+			<input type="checkbox"name="setPhoto"> <span style="font-size:10px; margin-right:10px;">設為大頭貼</span>
 			<input id ="uploadPhoto" type="submit" value="上傳">
 		</form>
+
 	</div>
 
 	<div style="width:100%; height:1px; background: #888888; margin-bottom: 5px;"></div>

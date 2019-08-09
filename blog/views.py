@@ -6,7 +6,8 @@ from django.contrib.auth.hashers import make_password, check_password
 from urllib.parse import unquote
 import json
 from django.http import JsonResponse, HttpResponseRedirect
-
+from django.views.decorators.http import require_POST
+from django.db.models import Q
 import datetime
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -19,63 +20,76 @@ forms = {'form':SignUpForm, 'signin': LoginForm,}
 def photopage(request):
 	# return JsonResponse({'id':1, 'name': 'abc', 'description':'des'})
 	token = request.COOKIES['token']
+
 	user = getUserByToken(token)
-	if request.method == 'POST':
-		myImages = request.FILES.getlist('myImages')
-		for image in myImages:
-			print(image)
+	
+	myImages = request.FILES.getlist('myImages')
+	check = request.POST.get('setPhoto')
+
+	for image in myImages:
+		if check:
+			photo = Photo(user=user, photo=image, is_sticker=True)
+			check = None
+		else:
 			photo = Photo(user=user, photo=image)
-			photo.save()
+		photo.save()
 
 	replyDic = {}
 	replyDic['chats'] = User.userChat.getChatList(user=user)
 	replyDic['photos'] = Photo.blogPhoto.getUserPhotoAll(user)
+	replyDic['accountPhoto'] = Photo.blogPhoto.getUserPhoto(user)
 	return render(request, 'photo.html', replyDic)
 
 def index(request):
-	token = request.COOKIES['token']
+	try:
+		token = request.COOKIES['token']
+	except Exception as e:	
+		return render(request, 'login.html', locals())
 	user = getUserByToken(token)
 	if user:
 		return information(request, id=user.id)
-	return render(request, 'login.html', locals())
+	else:
+		return render(request, 'login.html', locals())
+	
+		
 
 def information(request, id=None):
 	token = request.COOKIES['token']
 	user = getUserByToken(token)
-	informations = User.userChat.get(id=id)
+	informations = User.objects.get(id=id)
 	replyDic = {}
 	photos = Photo.blogPhoto.getUserPhotoAll(informations)
-	replyDic['User'] = informations
-	replyDic['posts'] = Post.mainPost.get(user=informations)
+	replyDic['user'] = user
+	replyDic['has_auth'] = user.id==informations.id
+	replyDic['owner'] = informations
+	replyDic['posts'] = Post.mainPost.get(user=user, owner=informations)
 	replyDic['chats'] = User.userChat.getChatList(user=user)
 	replyDic['photo'] = Photo.blogPhoto.getUserPhoto(informations)
 	replyDic['photos'] = photos[0:6 if len(photos) > 6 else len(photos)]
 	replyDic['notifications'] = Notification.notification.getAllNotifications(user=user)
-	print(replyDic['notifications'].first().category);
-
-	# if user and user!=informations:
-	# 	relationship1 = Relationship.objects.filter(user_id1 = user, user_id2 = informations).first()
-	# 	relationship2 = Relationship.objects.filter(user_id1 = informations, user_id2 = user).first()
-	# 	if relationship1:
-	# 		if relationship1.value == 0:
-	# 			replyDic['text'] = 'waiting'
-	# 			# return render(request, 'information.html', {'User': informations, 'text':"waiting"})
-	# 		else:
-	# 			replyDic['text'] = 'AlreadyFriend'
-	# 			# return render(request, 'information.html', {'User': informations, 'text':"AlreadyFriend"})
-	# 	elif relationship2:
-	# 		if relationship2.value == 0:
-	# 			replyDic['waitConfirm'] = informations.user_id
-	# 			# return render(request, 'information.html', {'User': informations, 'waitConfirm': informations.user_id})
-	# 		else:
-	# 			replyDic['text'] = 'AlreadyFriend'
-	# 			# return render(request, 'information.html', {'User': informations, 'text':"AlreadyFriend"})
-	# 	else:
-	# 		replyDic['addFriend'] = True
-	# 		# return render(request, 'information.html', {'User': informations, 'addFriend':True})
+	replyDic['unReadNotifications'] = len(Notification.objects.filter(user=user, is_read=False))
+	replyDic['accountPhoto'] = Photo.blogPhoto.getUserPhoto(user)
 
 	return render(request, 'information.html', replyDic)
 
+def post(request, id=None):
+	# token = request.COOKIES['token']
+	# user = getUserByToken(token)
+	posts = Post.mainPost.get(post_id=id, user=user)
+	token = request.COOKIES['token']
+	user = getUserByToken(token)
+	notifications = Notification.notification.getAllNotifications(user=user)
+	accountPhoto = Photo.blogPhoto.getUserPhoto(user)
+
+	return render(request, 'post.html', locals())
+
+@require_POST
+@csrf_exempt
+def readNotifications(request):
+	token = request.POST.get('token')
+	user = getUserByToken(token)
+	Notification.objects.filter(user=user).update(is_read=True)
+	return JsonResponse({'status':True, 'data':{ 'notifications' : len(Notification.objects.filter(user=user, is_read=False))}})
 
 @csrf_exempt
 def addFriend(request):
@@ -149,11 +163,24 @@ def uploadPost(request, user):
 		return JsonResponse(response)
 	content = request.POST.get('content')
 	attach = request.POST.get('attach_id')
-	data = Post.mainPost.uploadPost(user=user, content=content, attach=attach, image=image)
+	owner = User.objects.get(id=request.POST.get('owner'))
+	data = Post.mainPost.uploadPost(user=user, content=content, attach=attach, image=image, owner=owner)
 	if attach:
 		post = Post.objects.filter(id = attach).first()
 		Client.clientNotify.sendPostMessageNotify(user, post)
 	return JsonResponse({'status':True, 'data':data})
+
+def deletePost(request, user):
+	owner = User.objects.get(id=request.POST.get('owner'))
+	post_id=request.POST.get('post_id')
+	post = Post.objects.filter(Q(user=user, id=post_id) | Q(owner=owner, id=post_id)).first()
+	if post:
+		post.is_delete = True
+		post.save()
+		return JsonResponse({'status':True, 'data':{}})
+	else:
+		return JsonResponse({'status':False, 'data':{'error': 'the post does not exist.'}})
+
 
 
 
@@ -161,6 +188,7 @@ global operate
 operate={
 	'likepost':likePost,
 	'uploadPost': uploadPost,
+	'delete': deletePost,
 }
 
 
@@ -187,8 +215,13 @@ revise_action = {
 	'1': createDescription,
 }
 
-
-
+@require_POST
+@csrf_exempt
+def logout(request):
+	token = request.POST.get('token').replace('\"', '')
+	t = Token.objects.get(token=token)
+	t.delete()
+	return JsonResponse({'status':True, 'data':{}})
 
 def signup(request):
 	global forms
@@ -203,21 +236,25 @@ def signup(request):
 
 def login(request):
 	global forms
-	# if checkLogin(request):
-	# 	return render(request, 'main.html', {'posts': getPosts(request)})
-	if request.method == 'POST':
-		form = LoginForm(request.POST)
-		if not form.is_valid():
-			return render(request, 'login.html', forms)
-		user = User.objects.get(email=form.cleaned_data['email'])
-		password = user.password
-		if check_password(form.cleaned_data['password'], password):
-			token = generate_token(user.email)
-			t = Token(user=user, token=token)
-			t.save()
-			response = HttpResponseRedirect("/")
-			response.set_cookie(key='token', value=token)
-			return response
+	try:
+		token = request.COOKIES['token']
+		user = getUserByToken(token)
+		if user:
+			return information(request, id=user.id)
+	except:
+		if request.method == 'POST':
+			form = LoginForm(request.POST)
+			if not form.is_valid():
+				return render(request, 'login.html', forms)
+			user = User.objects.get(email=form.cleaned_data['email'])
+			password = user.password
+			if check_password(form.cleaned_data['password'], password):
+				token = generate_token(user.email)
+				t = Token(user=user, token=token)
+				t.save()
+				response = HttpResponseRedirect("/")
+				response.set_cookie(key='token', value=token)
+				return response
 	return render(request, 'login.html', forms)
 
 
@@ -297,6 +334,12 @@ def loginByToken(user):
 			'Message': '',
 			'token': t 
 	}})
+
+# def chatReply(request):
+# 	question = request.POST.get('question') #使用者訊息
+# 	reply = get_reply(question) #產生回覆
+# 	return JsonResponse({'reply': reply}) #回傳訊息
+
 # class RequestOperate():
 # 	def __init__(self, request):
 # 		self.request = request

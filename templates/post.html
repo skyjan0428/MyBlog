@@ -1,0 +1,51 @@
+{% extends 'information.html' %}
+{%load staticfiles %}
+
+{% block information %} 
+<div id="posts">
+{% for post in posts %}
+	<div id='post{{post.id}}' class="postForm">
+		<div class="title">
+			<img class="postFace" src="{{post.userPhoto}}" alt="Avatar">
+			<span class="name">{{post.name}}</span>
+			<span class="date">{{ post.date }} </span>
+			<img class="delete" src="{% static 'images/delete.png' %}" onclick='deletePost({{post.id}})'>
+		</div>
+        <p align="left"> {{ post.content }} </p>
+        {% for contentPhoto in post.contentPhotos %}
+        <img class="postContentImg" src="{{contentPhoto.photo.url}}"><br>
+        {% endfor %}
+        <p align="left" style="color:#4267B2; font-size: 10px;" id="like{{post.id}}"> 讚&nbsp;{{post.likes}}</p>
+        <div style="width:97%; height:2px; background: #F7F8FA; margin-bottom: 5px; margin-top: 10px;"></div>
+        <div class = "leaveMessageButton">
+        <button id = "like_button{{ post.id }}" onclick="like({{ post.id }})"> 
+        {% if post.hasLike %}	
+       	收回讚
+       	{% else %}
+       	讚
+       	{% endif %}
+        </button>
+        <button onclick=""> 留言</button>
+        </div>
+        <div style="width:100%; height:2px; background: #F7F8FA; margin-top: 8px;margin-bottom: 8px;"></div>
+    	
+    	<div id="message{{post.id}}">
+    		{% for message in post.messages %}
+    		<div class="messages" id = 'message{{message.id}}'>
+	    		<img class="postFace" src="{{message.userPhoto}}" alt="Avatar">
+	    		<div> <a href="/information/{{message.user_id}}"> {{message.name}}</a> {{message.content}}</div>
+    		</div>
+    		<br>
+    		{% endfor %}
+    	</div>
+        <div id="leaveMessage">
+        	<textarea placeholder="留言" id="mess{{post.id}}" onkeypress="onTestChange({{post.id}})"></textarea>
+        </div>
+    </div>
+    
+{% endfor %}
+</div>
+
+
+
+{% endblock %}

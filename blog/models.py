@@ -10,8 +10,12 @@ channel_layer = get_channel_layer()
 
 
 class MainPostManager(models.Manager):
-	def get(self, user):
-		posts = self.get_queryset().filter(user=user, attach_id=None).order_by('-date')
+	def get(self, user=None, post_id = None, owner=None):
+		if post_id:
+			posts = self.get_queryset().filter(id=post_id, is_delete=False)
+		else:
+			posts = self.get_queryset().filter(owner=owner, attach_id=None, is_delete=False).order_by('-date')
+		
 		lst = []
 		for post in posts:
 			data = {
@@ -19,10 +23,12 @@ class MainPostManager(models.Manager):
 				'content': post.content,
 				'id': post.id,
 				'name': post.user.name,
+				'user_id':post.user.id,
 				'likes': LikePost.postLikes.getPostLikesCount(post),
 				'hasLike': LikePost.postLikes.is_like(post, user),
 				'userPhoto': Photo.blogPhoto.getUserPhoto(post.user),
 				'contentPhotos': Photo.blogPhoto.getContentPhoto(post),
+				'has_auth': user == post.user or user==post.owner,
 			}
 			attachPost = self.getAttachs(post)
 			messages = []
@@ -34,8 +40,8 @@ class MainPostManager(models.Manager):
 	def getAttachPost(self, post):
 		p = {
 			'id': post.id,
-			'name': post.user.name,
-			'user_id':post.user_id,
+			'name': post.owner.name,
+			'user_id':post.owner.id,
 			'content':post.content,
 			'userPhoto': Photo.blogPhoto.getUserPhoto(post.user),
 		}
@@ -43,13 +49,14 @@ class MainPostManager(models.Manager):
 	def getAttachs(self, post):
 		return self.filter(attach=post)
 
-	def uploadPost(self, user, content, attach, image):
-		new_post = Post(content=content, user=user, attach=Post.objects.filter(id = attach).first())
+	def uploadPost(self, user, content, attach, image, owner):
+		new_post = Post(content=content, user=user, attach=Post.objects.filter(id=attach).first(), owner=owner)
 		new_post.save()
 		data = {
 			'content': new_post.content,
 			'date': new_post.date.strftime("%Y-%m-%d"),
 			'post_id': new_post.id,
+			'user_id':user.id,
 			'name':user.name,
 			'userPhoto': Photo.blogPhoto.getUserPhoto(user),
 			'attach_id': attach
@@ -135,7 +142,30 @@ class MessageManager(models.Manager):
 
 class NotificationManager(models.Manager):
 	def getAllNotifications(self, user):
-			return self.get_queryset().filter(user=user).order_by("-date")
+		notis = self.get_queryset().filter(user=user).order_by("-date")
+		lst = []
+		for noty in notis:
+			dic = {
+				'date':noty.date.strftime("%Y-%m-%d"),
+				'category': noty.category,
+				'user': noty.user,
+			}
+			if noty.category == 'postMessage':
+				dic['post_id'] = noty.post.id
+				dic['content'] = noty.user.name + " leaves a message on your post."
+				dic['post'] = noty.post
+				dic['photo'] = Photo.blogPhoto.getUserPhoto(user=noty.user)
+			elif noty.category == 'postLike':
+				dic['post_id'] = noty.post.id
+				dic['content'] = noty.user.name + " likes your post."
+				dic['post'] = noty.post
+				dic['photo'] = Photo.blogPhoto.getUserPhoto(user=noty.user)
+			else:
+				dic['content'] = noty.user.name + " send a message to you."
+				dic['sender_id'] = noty.message.sender.id
+				dic['photo'] = Photo.blogPhoto.getUserPhoto(user=noty.message.sender)
+			lst.append(dic)
+		return lst
 
 
 
@@ -151,7 +181,7 @@ class User(models.Model):
 	email = models.CharField(max_length=30)
 	password = models.CharField(max_length=100)
 	description = models.TextField(default='新增個人簡介，讓大家更瞭解你。')
-
+	
 	objects = models.Manager()
 	userChat = UserChatManager()
 	
@@ -166,7 +196,9 @@ class Post(models.Model):
 	date = models.DateTimeField('Datetime', auto_now=True)
 	content = models.TextField()
 	user = models.ForeignKey(User,related_name='post_user_id', on_delete=models.PROTECT,  default='')
+	owner = models.ForeignKey(User,related_name='post_owner_id', on_delete=models.PROTECT,  default='')
 	attach = models.ForeignKey('self',related_name='attach_to_post', on_delete=models.PROTECT, null = True)
+	is_delete = models.BooleanField(default=False)
 
 	objects = models.Manager()
 	mainPost = MainPostManager()
@@ -220,6 +252,7 @@ class Notification(models.Model):
 	user = models.ForeignKey(User,related_name='user_notify', on_delete=models.PROTECT, default='')
 	message = models.ForeignKey(Message,related_name='message_notify', on_delete=models.PROTECT, null=True, default='')
 	post = models.ForeignKey(Post,related_name='post_notify', on_delete=models.PROTECT, null=True, default='')
+	is_read = models.BooleanField(default=False)
 
 	objects = models.Manager()
 	notification = NotificationManager()
