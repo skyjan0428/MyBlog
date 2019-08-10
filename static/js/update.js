@@ -351,7 +351,7 @@ function sendChatEnter(id) {
 }
 
 var chatSocket = new WebSocket(
-  'ws://' + window.location.host + '/blog/');
+  'ws://'+window.location.host +'/blog/');
 
 chatSocket.onmessage = function(e) {
   var data = JSON.parse(e.data);

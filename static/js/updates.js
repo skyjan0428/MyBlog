@@ -88,7 +88,7 @@ function getCookie(cname) {
 }
 
 var chatSocket = new WebSocket(
-  'ws://' + window.location.host + '/blog/');
+  'ws://127.0.0.1/blog/');
 
 chatSocket.onmessage = function(e) {
   var data = JSON.parse(e.data);
