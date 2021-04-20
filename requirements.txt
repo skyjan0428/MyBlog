@@ -12,7 +12,7 @@ astropy==3.1
 async-timeout==3.0.1
 atomicwrites==1.2.1
 attrs==18.2.0
-autobahn==19.7.1
+autobahn==20.12.3
 Automat==0.7.0
 av==6.1.2
 Babel==2.6.0
